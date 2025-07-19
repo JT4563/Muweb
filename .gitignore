@@ -1,0 +1,23 @@
+# Bun
+bun/
+bun-install/
+bun.lockb
+
+# Node
+node_modules/
+
+# Build outputs
+dist/
+build/
+*.log
+*.out
+*.exe
+*.test
+bin/
+*.mod
+*.sum
+
+# VS Code and OS
+.vscode/
+.DS_Store
+Thumbs.db
