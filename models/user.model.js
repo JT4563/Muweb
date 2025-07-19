@@ -88,7 +88,6 @@ userSchema.pre('save', async function(next) {
 });
 
 /**
- * Compare password method for authentication
  * @param {string} candidatePassword - The password to compare
  * @returns {Promise<boolean>} True if passwords match, false otherwise
  */
