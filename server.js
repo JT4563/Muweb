@@ -1,1 +1,107 @@
-// server.js - placeholder content
+const http = require('http');
+const socketIo = require('socket.io');
+const app = require('./app');
+const dbConfig = require('./config/db.config');
+const redisConfig = require('./config/redis.config');
+const rabbitmqConfig = require('./config/rabbitmq.config');
+const socketServer = require('./websocket/socket.server');
+const logger = require('./utils/logger');
+require('dotenv').config();
+
+const PORT = process.env.PORT || 5000;
+
+// Create HTTP server
+const server = http.createServer(app);
+
+// Initialize Socket.IO
+const io = socketIo(server, {
+  cors: {
+    origin: process.env.NODE_ENV === 'production' 
+      ? process.env.FRONTEND_URL 
+      : 'http://localhost:3000',
+    methods: ['GET', 'POST'],
+    credentials: true
+  },
+  transports: ['websocket', 'polling']
+});
+
+// Initialize socket server with authentication
+socketServer.init(io);
+
+/**
+ * Graceful shutdown handler
+ */
+const gracefulShutdown = async (signal) => {
+  logger.info(`Received ${signal}. Starting graceful shutdown...`);
+  
+  try {
+    // Close HTTP server
+    server.close(() => {
+      logger.info('HTTP server closed');
+    });
+
+    // Close database connections
+    await dbConfig.disconnect();
+    
+    // Close Redis connection
+    await redisConfig.disconnect();
+    
+    // Close RabbitMQ connection
+    await rabbitmqConfig.disconnect();
+    
+    logger.info('Graceful shutdown completed');
+    process.exit(0);
+  } catch (error) {
+    logger.error('Error during graceful shutdown:', error);
+    process.exit(1);
+  }
+};
+
+/**
+ * Initialize all services and start server
+ */
+const startServer = async () => {
+  try {
+    // Connect to MongoDB
+    await dbConfig.connect();
+    logger.info('Connected to MongoDB');
+
+    // Connect to Redis
+    await redisConfig.connect();
+    logger.info('Connected to Redis');
+
+    // Connect to RabbitMQ
+    await rabbitmqConfig.connect();
+    logger.info('Connected to RabbitMQ');
+
+    // Start the server
+    server.listen(PORT, () => {
+      logger.info(`🚀 CodeCrafter server running on port ${PORT}`);
+      logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+      logger.info(`WebSocket enabled: ${io ? 'Yes' : 'No'}`);
+    });
+
+    // Handle process signals for graceful shutdown
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+  } catch (error) {
+    logger.error('Failed to start server:', error);
+    process.exit(1);
+  }
+};
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  gracefulShutdown('unhandledRejection');
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  logger.error('Uncaught Exception:', error);
+  gracefulShutdown('uncaughtException');
+});
+
+// Start the server
+startServer();
