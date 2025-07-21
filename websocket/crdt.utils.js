@@ -12,11 +12,13 @@ class CRDTUtils {
   /**
    * Operation types for text editing
    */
-  static OPERATIONS = {
-    INSERT: 'insert',
-    DELETE: 'delete',
-    RETAIN: 'retain'
-  };
+  static get OPERATIONS() {
+    return {
+      INSERT: 'insert',
+      DELETE: 'delete',
+      RETAIN: 'retain'
+    };
+  }
 
   /**
    * Process an incoming operation

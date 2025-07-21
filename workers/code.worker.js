@@ -353,16 +353,26 @@ class CodeWorker {
    */
   async publishExecutionResult(data) {
     try {
-      // This could be used to send results back to WebSocket clients
-      // For now, we'll just log it
-      logger.debug('Execution result ready for real-time update', {
+      // Send real-time update to WebSocket clients via Redis pub/sub
+      const redisConfig = require('../config/redis.config');
+      const client = await redisConfig.getClient();
+      
+      const updateMessage = {
+        type: 'execution_complete',
+        sessionId: data.sessionId,
+        jobId: data.jobId,
+        result: data.result,
+        timestamp: new Date().toISOString()
+      };
+      
+      // Publish to Redis channel that WebSocket server subscribes to
+      await client.publish(`session:${data.sessionId}:updates`, JSON.stringify(updateMessage));
+      
+      logger.debug('Execution result published for real-time update', {
         jobId: data.jobId,
         sessionId: data.sessionId,
         success: !data.result.error
       });
-
-      // TODO: Implement WebSocket notification mechanism
-      // This could publish to a Redis channel that the WebSocket server subscribes to
       
     } catch (error) {
       logger.error('Failed to publish execution result:', error);

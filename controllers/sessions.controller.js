@@ -138,7 +138,7 @@ const sessionController = {
     try {
       const { page = 1, limit = 20, language, search } = req.query;
 
-      let query = { isPublic: true, isActive: true };
+      const query = { isPublic: true, isActive: true };
 
       if (language) {
         query.language = language;
@@ -201,7 +201,7 @@ const sessionController = {
         });
       }
 
-      let query = {
+      const query = {
         $and: [
           {
             $or: [

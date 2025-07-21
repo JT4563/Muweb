@@ -1,16 +1,36 @@
 const validator = {
   /**
+   * Sanitize input to prevent XSS attacks
+   */
+  sanitizeInput: (input) => {
+    if (typeof input !== 'string') return input;
+    return input
+      .replace(/[<>]/g, '') // Remove < and > to prevent HTML injection
+      .replace(/javascript:/gi, '') // Remove javascript: protocol
+      .replace(/on\w+=/gi, '') // Remove event handlers like onclick=
+      .trim();
+  },
+
+  /**
    * Validate user registration data
    */
   validateRegistration: (req, res, next) => {
+    // Sanitize inputs
     const { email, password, username, firstName, lastName } = req.body;
+    req.body.email = validator.sanitizeInput(email);
+    req.body.username = validator.sanitizeInput(username);
+    req.body.firstName = validator.sanitizeInput(firstName);
+    req.body.lastName = validator.sanitizeInput(lastName);
+    
     const errors = [];
 
-    // Email validation
+    // Email validation - More robust regex to prevent bypass
     if (!email) {
       errors.push('Email is required');
-    } else if (!/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(email)) {
+    } else if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
       errors.push('Please provide a valid email address');
+    } else if (email.length > 254) {
+      errors.push('Email address is too long');
     }
 
     // Username validation
@@ -22,13 +42,19 @@ const validator = {
       errors.push('Username can only contain letters, numbers, and underscores');
     }
 
-    // Password validation
+    // Password validation - Enhanced security
     if (!password) {
       errors.push('Password is required');
     } else if (password.length < 8) {
       errors.push('Password must be at least 8 characters long');
+    } else if (password.length > 128) {
+      errors.push('Password must be less than 128 characters');
     } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
       errors.push('Password must contain at least one uppercase letter, one lowercase letter, and one number');
+    } else if (/^(.)\1+$/.test(password)) {
+      errors.push('Password cannot be all the same character');
+    } else if (/(?:password|12345|qwerty|admin|login|pass)/i.test(password)) {
+      errors.push('Password contains common words that are not allowed');
     }
 
     // First name validation
@@ -65,8 +91,10 @@ const validator = {
 
     if (!email) {
       errors.push('Email is required');
-    } else if (!/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(email)) {
+    } else if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
       errors.push('Please provide a valid email address');
+    } else if (email.length > 254) {
+      errors.push('Email address is too long');
     }
 
     if (!password) {
@@ -332,20 +360,6 @@ const validator = {
     }
 
     next();
-  },
-
-  /**
-   * Sanitize input to prevent XSS attacks
-   */
-  sanitizeInput: (input) => {
-    if (typeof input !== 'string') return input;
-    
-    return input
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#x27;')
-      .replace(/\//g, '&#x2F;');
   },
 
   /**
