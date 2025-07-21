@@ -1,0 +1,53 @@
+# Prometheus Configuration
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "rules/*.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Node.js Application
+  - job_name: 'codecrafter-app'
+    static_configs:
+      - targets: ['host.docker.internal:3000']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Node Exporter (System metrics)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  # cAdvisor (Container metrics)
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+
+  # MongoDB Exporter (if available)
+  - job_name: 'mongodb'
+    static_configs:
+      - targets: ['host.docker.internal:9216']
+    scrape_interval: 30s
+
+  # Redis Exporter (if available)
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['host.docker.internal:9121']
+    scrape_interval: 30s
+
+  # RabbitMQ Management (if available)
+  - job_name: 'rabbitmq'
+    static_configs:
+      - targets: ['host.docker.internal:15692']
+    scrape_interval: 30s
