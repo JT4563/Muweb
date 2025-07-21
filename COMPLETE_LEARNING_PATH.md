@@ -809,291 +809,2145 @@ app.use(errorHandler);
 
 ## 🗄️ **PHASE 2: Database Layer (Week 3-4) - The Memory System**
 
-### **Step 4: Database Configuration (config/db.config.js)**
+### **🤔 Before We Start: What is a Database?**
 
-#### **📖 MongoDB Connection Mastery:**
-```javascript
-// Your db.config.js explained:
+**Think of a database like a SUPER ORGANIZED LIBRARY:**
+- **Traditional Library** = You need to walk around, search manually, limited copies
+- **Digital Database** = Instant search, infinite copies, automatic organization
+- **Your CodeCrafter Database** = Storage for users, coding sessions, logs, everything!
 
-const mongoose = require('mongoose');  // MongoDB Object Document Mapper (ODM)
+**Database vs File Storage:**
+- **Files** = Like keeping papers in random folders (messy, slow, can break)
+- **Database** = Like having a magical librarian who organizes everything perfectly
 
-// Connection string parts:
-// mongodb://username:password@host:port/database_name
-const connectionString = `mongodb://${dbUser}:${dbPassword}@${dbHost}/${dbName}`;
+**Why MongoDB for Your Project:**
+- **Document-based** = Stores data like JSON objects (natural for JavaScript)
+- **Flexible** = Can change structure without breaking existing data
+- **Scalable** = Handles millions of users and sessions
+- **Real-time** = Perfect for collaborative coding features
 
-// What this means:
-// - dbUser: Database username for authentication
-// - dbPassword: Database password
-// - dbHost: Where MongoDB is running (localhost or cloud)
-// - dbName: Your specific database name
+---
+
+### **📁 PHASE 2 File Structure Overview**
+
+**Here are the EXACT FILES we'll work with in this phase:**
+
+```
+📁 Your Project Root/
+├── 🔧 config/
+│   ├── db.config.js           ← DATABASE CONNECTION SETUP
+│   ├── redis.config.js        ← CACHE CONNECTION SETUP  
+│   └── rabbitmq.config.js     ← MESSAGE QUEUE SETUP
+│
+├── 📊 models/
+│   ├── user.model.js          ← USER DATA BLUEPRINT
+│   ├── session.model.js       ← CODING SESSION BLUEPRINT
+│   └── log.model.js           ← ACTIVITY LOG BLUEPRINT
+│
+├── 🧪 test/ (you'll create these)
+│   ├── test-connection.js     ← TEST DATABASE CONNECTION
+│   ├── test-user-creation.js  ← TEST USER CREATION
+│   ├── test-session-creation.js ← TEST SESSION CREATION
+│   └── practice-queries.js    ← PRACTICE DATABASE QUERIES
+│
+├── 📊 monitoring/ (you'll create these)
+│   ├── database.monitor.js    ← DATABASE HEALTH MONITORING
+│   └── query.profiler.js      ← SLOW QUERY DETECTION
+│
+├── 💾 backup/ (you'll create these)
+│   └── database.backup.js     ← BACKUP & RECOVERY SYSTEM
+│
+├── 🌍 .env                    ← ENVIRONMENT VARIABLES
+├── 📦 package.json            ← PROJECT DEPENDENCIES
+└── 🚀 server.js               ← MAIN SERVER (connects to database)
 ```
 
-**🎯 Learning Tasks:**
-1. **Install MongoDB locally** and create a database
-2. **Use MongoDB Compass** to visualize your data
-3. **Practice mongoose queries** in MongoDB shell
-4. **Understand connection pooling** and why it matters
+**🔗 File Connection Flow Diagram:**
 
-**💡 Key Concepts:**
-- **ODM**: Object Document Mapper (translates JS objects ↔ MongoDB documents)
-- **Connection Pooling**: Reusing database connections for performance
-- **Schemas**: Blueprint for your data structure
+```
+📈 DATABASE FLOW DIAGRAM (How Files Connect):
 
-### **Step 4.5: Database Migrations & Schema Evolution**
+🚀 server.js
+    ↓ imports
+🔧 config/db.config.js
+    ↓ connects to
+🗄️ MongoDB Database
+    ↑ used by
+📊 models/user.model.js
+📊 models/session.model.js  
+📊 models/log.model.js
+    ↑ used by
+🎮 controllers/ (in Phase 3)
+    ↑ used by
+📂 api/ routes (in Phase 3)
+    ↑ used by
+🌐 frontend (in Phase 5)
 
-#### **🔄 Managing Database Changes Over Time (Like Renovation Plans):**
+🔄 MONITORING FLOW:
+📊 monitoring/database.monitor.js → watches → 🗄️ MongoDB
+📊 monitoring/query.profiler.js → analyzes → 🐌 Slow Queries
 
-**Think of database migrations like renovating your restaurant:**
-- **Initial setup** = Building the restaurant from scratch
-- **Migrations** = Adding new rooms, changing layouts, updating equipment
-- **Rollbacks** = Undoing changes if something goes wrong
+💾 BACKUP FLOW:
+💾 backup/database.backup.js → creates → 📦 Backup Files
+```
+
+---
+
+### **Step 4: Database Configuration (config/db.config.js) - THE FOUNDATION**
+
+#### **📖 What Does config/db.config.js Do? (Explained Like You're 5)**
+
+**📁 FILE LOCATION: `config/db.config.js`**
+
+**Think of config/db.config.js as the PHONE NUMBER to your storage warehouse:**
+- When your app needs to save data → calls the warehouse
+- When your app needs to find data → calls the warehouse  
+- config/db.config.js = the phone number and connection instructions
+
+**🔗 This File Connects To:**
+- ⬅️ **IMPORTED BY**: `server.js` (to start database connection)
+- ➡️ **USES**: Environment variables from `.env` file
+- ➡️ **CONNECTS TO**: MongoDB database (local or cloud)
+- ➡️ **ENABLES**: All model files (`models/*.js`) to work
+
+**📋 Step-by-Step: Create config/db.config.js**
 
 ```javascript
-// migrations/001_create_users_table.js
-const migration = {
-  up: async () => {
-    // What to do when applying this migration
-    await db.createCollection('users', {
-      validator: {
-        $jsonSchema: {
-          bsonType: 'object',
-          required: ['username', 'email', 'password'],
-          properties: {
-            username: { bsonType: 'string', minLength: 3 },
-            email: { bsonType: 'string', pattern: '^.+@.+\..+$' },
-            password: { bsonType: 'string', minLength: 8 }
-          }
-        }
+// 📁 FILE: config/db.config.js
+// 🎯 PURPOSE: Connect your app to MongoDB database
+// 🔗 IMPORTED BY: server.js
+// 🔗 USES: .env environment variables
+
+// 1. IMPORTING MONGODB DRIVER (Like getting the phone to call warehouse)
+const mongoose = require('mongoose');
+// ↳ What is 'mongoose'? It's like a translator between JavaScript and MongoDB
+// ↳ MongoDB speaks "BSON" (binary JSON), JavaScript speaks "JSON"
+// ↳ Mongoose translates between them automatically
+// ↳ Think: "I need a translator to talk to my Chinese warehouse"
+
+// 2. ENVIRONMENT VARIABLES (Like having different warehouse addresses)
+// 🔗 THESE COME FROM: .env file in your project root
+const DB_HOST = process.env.DB_HOST || 'localhost';
+const DB_PORT = process.env.DB_PORT || 27017;
+const DB_NAME = process.env.DB_NAME || 'codecrafter';
+const DB_USER = process.env.DB_USER || '';
+const DB_PASS = process.env.DB_PASS || '';
+
+// ↳ What are environment variables? Different settings for different situations
+// ↳ Development = Your local computer warehouse
+// ↳ Production = Real business warehouse in the cloud
+// ↳ Like: Having home address vs work address
+
+// 3. CONNECTION STRING BUILDING (Like writing the complete address)
+const buildConnectionString = () => {
+  if (DB_USER && DB_PASS) {
+    // With authentication (like password-protected warehouse)
+    return `mongodb://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}`;
+  } else {
+    // Without authentication (like open warehouse for development)
+    return `mongodb://${DB_HOST}:${DB_PORT}/${DB_NAME}`;
+  }
+};
+
+// ↳ What does this do? Creates the full address to reach your database
+// ↳ Format: mongodb://username:password@address:port/warehouse-name
+// ↳ Like: "My warehouse is at 123 Main St, ask for John with password 'secret'"
+
+// 4. CONNECTION OPTIONS (Like delivery instructions)
+const connectionOptions = {
+  useNewUrlParser: true,        // Use new address format
+  useUnifiedTopology: true,     // Use new connection system
+  serverSelectionTimeoutMS: 5000,  // Wait 5 seconds to find server
+  socketTimeoutMS: 45000,       // Keep connection alive for 45 seconds
+  maxPoolSize: 10,              // Maximum 10 phone lines to warehouse
+  minPoolSize: 2,               // Always keep 2 phone lines open
+  maxIdleTimeMS: 30000,         // Close idle connections after 30 seconds
+  bufferMaxEntries: 0,          // Don't store requests if disconnected
+  bufferCommands: false,        // Fail immediately if disconnected
+};
+
+// ↳ What is connection pooling? Like having multiple phone lines
+// ↳ Without pooling: One phone call at a time (SLOW)
+// ↳ With pooling: Multiple simultaneous calls (FAST)
+// ↳ Think: "I have 10 employees who can all call warehouse at same time"
+
+// 5. MAIN CONNECTION FUNCTION (Like actually making the phone call)
+// 🔗 THIS FUNCTION IS CALLED BY: server.js when app starts
+const connectDB = async () => {
+  try {
+    console.log('📞 Calling MongoDB warehouse...');
+    
+    // Step 1: Build the phone number
+    const connectionString = buildConnectionString();
+    console.log(`🔗 Warehouse address: ${connectionString.replace(/:.*@/, ':****@')}`);
+    // ↳ The .replace() hides the password in logs for security
+    
+    // Step 2: Make the connection
+    const connection = await mongoose.connect(connectionString, connectionOptions);
+    
+    // Step 3: Confirm connection worked
+    console.log(`✅ Warehouse connected successfully!`);
+    console.log(`📍 Database: ${connection.connection.name}`);
+    console.log(`🏠 Host: ${connection.connection.host}:${connection.connection.port}`);
+    
+    // Step 4: Set up connection monitoring
+    setupConnectionMonitoring();
+    
+    return connection;
+    
+  } catch (error) {
+    console.error('❌ Failed to connect to warehouse:', error.message);
+    
+    // If connection fails, explain why:
+    if (error.message.includes('authentication failed')) {
+      console.error('🔐 Wrong username or password');
+    } else if (error.message.includes('ECONNREFUSED')) {
+      console.error('🚫 Warehouse is closed (MongoDB not running)');
+    } else if (error.message.includes('timeout')) {
+      console.error('⏰ Warehouse took too long to answer');
+    }
+    
+    // Don't crash the app, but don't continue either
+    process.exit(1);
+  }
+};
+
+// 6. CONNECTION MONITORING (Like having a security system)
+const setupConnectionMonitoring = () => {
+  // When connection is established
+  mongoose.connection.on('connected', () => {
+    console.log('🟢 Warehouse phone line connected');
+  });
+
+  // When connection fails
+  mongoose.connection.on('error', (err) => {
+    console.error('🔴 Warehouse phone line error:', err);
+  });
+
+  // When connection drops
+  mongoose.connection.on('disconnected', () => {
+    console.log('📴 Warehouse phone line disconnected');
+    
+    // Try to reconnect automatically
+    console.log('🔄 Attempting to reconnect to warehouse...');
+  });
+
+  // When app is shutting down
+  process.on('SIGINT', async () => {
+    console.log('📴 Hanging up warehouse phone...');
+    await mongoose.connection.close();
+    console.log('✅ Warehouse connection closed cleanly');
+    process.exit(0);
+  });
+};
+
+// 7. HEALTH CHECK FUNCTION (Like asking "Are you still there?")
+// 🔗 THIS FUNCTION USED BY: monitoring/database.monitor.js
+const checkDBHealth = async () => {
+  try {
+    // Simple query to test connection
+    await mongoose.connection.db.admin().ping();
+    return {
+      status: 'healthy',
+      message: 'Database connection is working',
+      timestamp: new Date()
+    };
+  } catch (error) {
+    return {
+      status: 'unhealthy',
+      message: error.message,
+      timestamp: new Date()
+    };
+  }
+};
+
+// 8. GRACEFUL DISCONNECT (Like saying goodbye properly)
+// 🔗 THIS FUNCTION CALLED BY: server.js when app shuts down
+const disconnectDB = async () => {
+  try {
+    await mongoose.connection.close();
+    console.log('👋 Warehouse connection closed gracefully');
+  } catch (error) {
+    console.error('❌ Error closing warehouse connection:', error);
+  }
+};
+
+// 9. EXPORT THE FUNCTIONS (Like giving others the phone number)
+// 🔗 THESE ARE IMPORTED BY: server.js, monitoring files, test files
+module.exports = {
+  connectDB,           // Main connection function
+  checkDBHealth,       // Health check function
+  disconnectDB,        // Graceful shutdown function
+  connectionString: buildConnectionString()  // For external tools
+};
+```
+
+**🔗 HOW config/db.config.js CONNECTS TO OTHER FILES:**
+
+```
+📊 DATABASE CONNECTION FLOW DIAGRAM:
+
+1. 🚀 server.js
+   ↓ imports connectDB function
+2. 🔧 config/db.config.js  
+   ↓ reads variables from
+3. 🌍 .env file
+   ↓ connects to
+4. 🗄️ MongoDB Database
+   ↓ enables
+5. � models/user.model.js
+6. 📊 models/session.model.js
+7. 📊 models/log.model.js
+   ↓ used by
+8. 🎮 controllers/ (Phase 3)
+   ↓ called by
+9. 📂 api/ routes (Phase 3)
+   ↓ responds to
+10. 🌐 Frontend requests
+
+🔄 MONITORING CONNECTIONS:
+📊 monitoring/database.monitor.js → imports checkDBHealth()
+📊 monitoring/query.profiler.js → uses mongoose connection
+💾 backup/database.backup.js → uses connectionString
+
+📝 TEST CONNECTIONS:
+🧪 test/test-connection.js → imports connectDB()
+🧪 test/test-user-creation.js → imports connectDB()
+🧪 test/practice-queries.js → imports connectDB()
+```
+
+**📋 STEP 1: Create Your Environment File**
+
+**📁 FILE: `.env` (in your project root)**
+```bash
+# 🌍 FILE: .env
+# 🎯 PURPOSE: Store sensitive configuration data
+# 🔗 USED BY: config/db.config.js
+# ⚠️ NEVER COMMIT THIS FILE TO GIT!
+
+# Development Database Settings
+NODE_ENV=development
+DB_HOST=localhost
+DB_PORT=27017
+DB_NAME=codecrafter_dev
+DB_USER=
+DB_PASS=
+
+# Production Database Settings (for later)
+# DB_HOST=your-production-host.com
+# DB_NAME=codecrafter_prod
+# DB_USER=your-username
+# DB_PASS=your-secure-password
+
+# Other Configuration
+PORT=3000
+JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+
+# Redis Configuration (for later phases)
+REDIS_URL=redis://localhost:6379
+
+# RabbitMQ Configuration (for later phases)  
+RABBITMQ_URL=amqp://localhost
+```
+
+**📋 STEP 2: How server.js Uses This File**
+
+**� FILE: `server.js` (connections to database)**
+```javascript
+// 🔗 FILE: server.js  
+// 🎯 PURPOSE: Start the application and connect to database
+// 🔗 IMPORTS: config/db.config.js
+
+// Load environment variables FIRST
+require('dotenv').config(); // ← Loads .env file
+
+// Import database connection
+const { connectDB, disconnectDB } = require('./config/db.config'); // ← Our db config file
+
+// Import app setup
+const app = require('./app');
+
+// Server startup sequence
+async function startServer() {
+  try {
+    // Step 1: Connect to database FIRST
+    console.log('🔌 Connecting to MongoDB...');
+    await connectDB(); // ← This calls our config/db.config.js
+    console.log('✅ MongoDB connected successfully');
+    
+    // Step 2: Start web server
+    const PORT = process.env.PORT || 3000;
+    const server = app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+    });
+    
+    // Step 3: Handle graceful shutdown
+    process.on('SIGTERM', async () => {
+      console.log('📴 SIGTERM received. Shutting down gracefully...');
+      await disconnectDB(); // ← Graceful database disconnect
+      server.close(() => {
+        console.log('✅ Server closed');
+        process.exit(0);
+      });
+    });
+    
+  } catch (error) {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+// Start the server
+startServer();
+```
+
+**🎯 Learning Exercise (Baby Steps for Absolute Beginners):**
+1. **Install MongoDB on your computer**:
+   ```bash
+   # On Windows (using Chocolatey):
+   choco install mongodb
+   
+   # Or download from: https://www.mongodb.com/download-center/community
+   ```
+
+2. **Start MongoDB service**:
+   ```bash
+   # On Windows:
+   net start MongoDB
+   
+   # On Mac/Linux:
+   sudo systemctl start mongod
+   ```
+
+3. **Test your connection**:
+   ```javascript
+   // Create test-connection.js:
+   const { connectDB } = require('./config/db.config');
+   
+   async function test() {
+     await connectDB();
+     console.log('🎉 Database connection works!');
+     process.exit(0);
+   }
+   
+   test();
+   ```
+
+4. **Install MongoDB Compass** (GUI for viewing data):
+   - Download from: https://www.mongodb.com/products/compass
+   - Connect to: `mongodb://localhost:27017`
+   - You'll see your `codecrafter` database appear when you first save data
+
+5. **Practice basic MongoDB operations**:
+   ```bash
+   # Open MongoDB shell:
+   mongo
+   
+   # List databases:
+   show dbs
+   
+   # Switch to your database:
+   use codecrafter
+   
+   # List collections (tables):
+   show collections
+   
+   # Find all users:
+   db.users.find()
+   ```
+
+**💡 Key Concepts to Master (Explained Simply):**
+
+**🗄️ What is MongoDB? (Like Digital Filing Cabinet)**
+- **Traditional SQL databases** = Like rigid filing cabinet with fixed drawers
+- **MongoDB** = Like flexible boxes where you can put any shape of items
+- **Documents** = Individual items you store (like a user profile)
+- **Collections** = Groups of similar items (like "all users" or "all sessions")
+
+**🔄 What is Mongoose? (Like Personal Assistant)**
+- **Raw MongoDB** = Like talking directly to warehouse worker (complicated)
+- **Mongoose** = Like having assistant who understands your needs
+- **Schema** = Rules your assistant follows (like "user must have email")
+- **Model** = Your assistant specialized for specific tasks (UserModel, SessionModel)
+
+**📞 Connection Pooling (Like Having Multiple Phone Lines)**
+- **Without pooling**: One request at a time = SLOW
+- **With pooling**: Multiple simultaneous requests = FAST
+- **Pool size**: How many "phone lines" you have to the database
+- **Why important**: 100 users trying to login at once = need 100 phone lines
+
+**🛡️ Environment Variables (Like Having Different Keys)**
+- **Development environment** = Your home office (relaxed security)
+- **Production environment** = Bank vault (maximum security)
+- **Environment variables** = Different keys for different buildings
+- **Why needed**: Don't put real passwords in your code!
+
+**⚡ Connection Monitoring (Like Security Cameras)**
+- **Why monitor**: Database connections can break
+- **Events to watch**: connected, disconnected, error
+- **Auto-reconnect**: If phone line drops, redial automatically
+- **Graceful shutdown**: Hang up properly when closing business
+
+**🎯 Troubleshooting Common Issues:**
+
+```javascript
+// Error: "MongooseServerSelectionError"
+// ↳ Problem: Can't find MongoDB server
+// ↳ Solution: Make sure MongoDB is running
+// ↳ Check: Is MongoDB service started?
+
+// Error: "Authentication failed"  
+// ↳ Problem: Wrong username or password
+// ↳ Solution: Check DB_USER and DB_PASS environment variables
+// ↳ Check: Are credentials correct?
+
+// Error: "Connection timeout"
+// ↳ Problem: Database takes too long to respond
+// ↳ Solution: Check network connection or increase timeout
+// ↳ Check: Is internet working? Is database server running?
+
+// Error: "Too many connections"
+// ↳ Problem: Hit connection pool limit
+// ↳ Solution: Increase maxPoolSize or fix connection leaks
+// ↳ Check: Are you closing connections properly?
+```
+
+---
+
+### **Step 5: Understanding Data Models (models/ folder) - THE BLUEPRINTS**
+
+#### **📖 What Are Data Models? (Explained Like Building Houses)**
+
+**Think of data models like ARCHITECTURAL BLUEPRINTS:**
+- **Before building a house** → You need blueprints (what rooms, what size, what materials)
+- **Before saving data** → You need models (what fields, what types, what rules)
+- **Blueprint** = ensures every house follows the same structure
+- **Model** = ensures every user/session follows the same structure
+
+**📁 Model Files Overview:**
+```
+📊 models/
+├── user.model.js         ← USER DATA STRUCTURE (people using your app)
+├── session.model.js      ← CODING SESSION STRUCTURE (collaborative coding rooms)
+└── log.model.js          ← ACTIVITY LOG STRUCTURE (what happened when)
+```
+
+**🔗 How Models Connect:**
+```
+📊 DATA FLOW DIAGRAM:
+
+🔧 config/db.config.js
+    ↓ provides connection to
+📊 models/user.model.js
+    ↓ used by
+🎮 controllers/auth.controller.js (Phase 3)
+    ↓ called by
+📂 api/auth.routes.js (Phase 3)
+
+📊 models/session.model.js  
+    ↓ references user.model.js (owner field)
+    ↓ used by
+🎮 controllers/sessions.controller.js (Phase 3)
+    ↓ called by
+📂 api/sessions.routes.js (Phase 3)
+
+📊 models/log.model.js
+    ↓ references user.model.js AND session.model.js
+    ↓ used by
+📊 monitoring/database.monitor.js
+    ↓ tracks activity across all models
+```
+
+---
+
+#### **👤 Step 5.1: User Model (models/user.model.js)**
+
+**📁 FILE: `models/user.model.js`**
+**🎯 PURPOSE**: Define how user data is structured and stored
+**🔗 USED BY**: controllers/auth.controller.js, api/auth.routes.js
+**🔗 REFERENCES**: None (this is a root model)
+
+```javascript
+// 📁 FILE: models/user.model.js
+// 🎯 PURPOSE: User data blueprint - how users are stored in database
+// 🔗 USED BY: auth.controller.js, sessions.controller.js
+// 🔗 USES: config/db.config.js connection
+
+// 1. IMPORTING TOOLS (Like getting construction tools)
+const mongoose = require('mongoose');
+// ↳ mongoose = the tool that helps us create blueprints
+const bcrypt = require('bcrypt');
+// ↳ bcrypt = tool for making passwords super secure (install: npm install bcrypt)
+const { Schema } = mongoose;
+// ↳ Schema = the actual blueprint template
+
+// 2. CREATING THE USER BLUEPRINT (Like designing a house)
+const userSchema = new Schema({
+  // Basic Information (Like house address and owner)
+  username: {
+    type: String,              // ↳ Must be text (not number)
+    required: [true, 'Username is required'],  // ↳ MUST have username (like MUST have address)
+    unique: true,              // ↳ No two users can have same username
+    trim: true,                // ↳ Remove extra spaces
+    minlength: [3, 'Username must be at least 3 characters'],
+    maxlength: [30, 'Username cannot exceed 30 characters'],
+    match: [/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores']
+  },
+  
+  email: {
+    type: String,              // ↳ Must be text
+    required: [true, 'Email is required'],  // ↳ MUST have email
+    unique: true,              // ↳ No two users can have same email
+    lowercase: true,           // ↳ Convert to lowercase automatically
+    trim: true,                // ↳ Remove extra spaces
+    match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email']  // ↳ Must look like email
+  },
+  
+  password: {
+    type: String,              // ↳ Must be text
+    required: [true, 'Password is required'],  // ↳ MUST have password
+    minlength: [8, 'Password must be at least 8 characters'],
+    // Note: We'll hash this before saving (make it unreadable)
+  },
+  
+  // User Preferences (Like house interior design)
+  preferences: {
+    theme: {
+      type: String,
+      enum: ['light', 'dark', 'auto'],  // ↳ Only these 3 options allowed
+      default: 'light'           // ↳ If not specified, use 'light'
+    },
+    editorSettings: {
+      fontSize: { type: Number, default: 14 },
+      tabSize: { type: Number, default: 2 },
+      wordWrap: { type: Boolean, default: true },
+      autoSave: { type: Boolean, default: true }
+    },
+    notifications: {
+      email: { type: Boolean, default: true },
+      browser: { type: Boolean, default: true },
+      collaboratorJoined: { type: Boolean, default: true },
+      sessionShared: { type: Boolean, default: true }
+    }
+  },
+  
+  // User Role & Permissions (Like house access levels)
+  role: {
+    type: String,
+    enum: ['user', 'admin', 'moderator'],  // ↳ Only these roles allowed
+    default: 'user'            // ↳ New users start as 'user'
+  },
+  
+  // Activity Tracking (Like house history)
+  lastLoginAt: {
+    type: Date,                // ↳ When they last visited
+    default: null
+  },
+  
+  isActive: {
+    type: Boolean,             // ↳ Is account active or suspended?
+    default: true
+  },
+  
+  emailVerified: {
+    type: Boolean,             // ↳ Did they confirm their email?
+    default: false
+  },
+  
+  // Automatic Timestamps (Like house built/renovated dates)
+  createdAt: {
+    type: Date,
+    default: Date.now          // ↳ Automatically set when user is created
+  },
+  
+  updatedAt: {
+    type: Date,
+    default: Date.now          // ↳ Automatically updated when user is modified
+  }
+}, {
+  // Schema options (Like construction rules)
+  timestamps: true,            // ↳ Automatically manage createdAt and updatedAt
+  versionKey: false,           // ↳ Don't add __v field
+  toJSON: { 
+    transform: (doc, ret) => {
+      delete ret.password;     // ↳ Never send password to frontend
+      return ret;
+    }
+  }
+});
+
+// 3. BEFORE SAVING USER (Like final inspection before moving in)
+// 🔗 THIS RUNS: Every time a user document is saved
+userSchema.pre('save', async function(next) {
+  // Only hash password if it's new or modified
+  if (!this.isModified('password')) return next();
+  
+  try {
+    console.log('🔒 Securing password...');
+    
+    // Hash the password (make it unreadable)
+    const saltRounds = 12;     // ↳ How secure the hashing is (higher = more secure)
+    this.password = await bcrypt.hash(this.password, saltRounds);
+    
+    console.log('✅ Password secured successfully');
+    next();
+  } catch (error) {
+    console.error('❌ Error securing password:', error);
+    next(error);
+  }
+});
+
+// 4. USER METHODS (Like special house features)
+// 🔗 USED BY: controllers/auth.controller.js for login verification
+userSchema.methods.comparePassword = async function(candidatePassword) {
+  // Check if provided password matches stored password
+  try {
+    return await bcrypt.compare(candidatePassword, this.password);
+  } catch (error) {
+    console.error('❌ Error comparing passwords:', error);
+    return false;
+  }
+};
+
+// 🔗 USED BY: controllers/auth.controller.js after successful login
+userSchema.methods.updateLastLogin = async function() {
+  // Update when user last logged in
+  this.lastLoginAt = new Date();
+  return await this.save();
+};
+
+// 🔗 USED BY: All controllers to send safe user data to frontend
+userSchema.methods.getPublicProfile = function() {
+  // Return safe user info (no sensitive data)
+  return {
+    id: this._id,
+    username: this.username,
+    email: this.email,
+    role: this.role,
+    preferences: this.preferences,
+    createdAt: this.createdAt,
+    lastLoginAt: this.lastLoginAt
+  };
+};
+
+// 5. STATIC METHODS (Like house factory features)
+// 🔗 USED BY: controllers/auth.controller.js for login
+userSchema.statics.findByEmail = function(email) {
+  // Find user by email address
+  return this.findOne({ email: email.toLowerCase() });
+};
+
+// 🔗 USED BY: admin controllers for user management
+userSchema.statics.findActiveUsers = function() {
+  // Find all active users
+  return this.find({ isActive: true });
+};
+
+// 🔗 USED BY: dashboard/statistics displays
+userSchema.statics.getUserStats = async function() {
+  // Get statistics about users
+  const totalUsers = await this.countDocuments();
+  const activeUsers = await this.countDocuments({ isActive: true });
+  const verifiedUsers = await this.countDocuments({ emailVerified: true });
+  
+  return {
+    total: totalUsers,
+    active: activeUsers,
+    verified: verifiedUsers,
+    inactive: totalUsers - activeUsers
+  };
+};
+
+// 6. INDEXES FOR PERFORMANCE (Like house address system)
+// 🔗 THESE MAKE: Database queries super fast
+userSchema.index({ email: 1 }, { unique: true });      // ↳ Fast email lookups for login
+userSchema.index({ username: 1 }, { unique: true });   // ↳ Fast username lookups
+userSchema.index({ createdAt: -1 });                   // ↳ Fast "newest users" queries
+userSchema.index({ lastLoginAt: -1 });                 // ↳ Fast "recent activity" queries
+
+// 7. CREATE THE MODEL (Like registering the house blueprint)
+// 🔗 THIS CREATES: The actual User model that other files import
+const User = mongoose.model('User', userSchema);
+
+// 🔗 EXPORTED TO: controllers/auth.controller.js, test files, etc.
+module.exports = User;
+```
+
+---
+
+#### **🧪 Step 5.2: Testing Your User Model**
+
+**📋 CREATE TEST FILE: `test/test-user-creation.js`**
+
+```javascript
+// 📁 FILE: test/test-user-creation.js
+// 🎯 PURPOSE: Test that user creation works correctly
+// 🔗 IMPORTS: models/user.model.js, config/db.config.js
+// 🔗 RUN WITH: node test/test-user-creation.js
+
+const mongoose = require('mongoose');
+const User = require('../models/user.model'); // ← Import our User model
+const { connectDB } = require('../config/db.config'); // ← Import database connection
+
+async function testUserCreation() {
+  try {
+    console.log('🧪 Starting User Model Tests...\n');
+    
+    // Step 1: Connect to database
+    console.log('📞 Connecting to database...');
+    await connectDB();
+    console.log('✅ Database connected\n');
+    
+    // Step 2: Create a test user
+    console.log('👤 Creating test user...');
+    const testUserData = {
+      username: 'testuser123',
+      email: 'test@example.com',
+      password: 'securepassword123'  // Will be automatically hashed by our pre-save hook
+    };
+    
+    const newUser = new User(testUserData);
+    const savedUser = await newUser.save();
+    
+    console.log('✅ User created successfully!');
+    console.log('📊 User data:', savedUser.getPublicProfile()); // ← Uses our custom method
+    console.log('🔒 Password hashed:', savedUser.password !== testUserData.password ? 'YES' : 'NO');
+    
+    // Step 3: Test password comparison
+    console.log('\n🔐 Testing password verification...');
+    const isValidPassword = await savedUser.comparePassword('securepassword123'); // ← Uses our custom method
+    const isInvalidPassword = await savedUser.comparePassword('wrongpassword');
+    
+    console.log('✅ Correct password check:', isValidPassword ? 'PASS' : 'FAIL');
+    console.log('✅ Wrong password check:', !isInvalidPassword ? 'PASS' : 'FAIL');
+    
+    // Step 4: Test static methods
+    console.log('\n🔍 Testing user lookup methods...');
+    const foundUser = await User.findByEmail('test@example.com'); // ← Uses our static method
+    console.log('✅ Find by email:', foundUser ? 'FOUND' : 'NOT FOUND');
+    
+    const userStats = await User.getUserStats(); // ← Uses our static method
+    console.log('📈 User statistics:', userStats);
+    
+    // Step 5: Test last login update
+    console.log('\n🕒 Testing last login update...');
+    await savedUser.updateLastLogin(); // ← Uses our instance method
+    console.log('✅ Last login updated:', savedUser.lastLoginAt);
+    
+    // Step 6: Clean up (delete test user)
+    console.log('\n🧹 Cleaning up test data...');
+    await User.deleteOne({ email: 'test@example.com' });
+    console.log('✅ Test user deleted');
+    
+    console.log('\n🎉 All User Model tests passed!');
+    
+  } catch (error) {
+    console.error('❌ Test failed:', error.message);
+    
+    // Show specific error types
+    if (error.code === 11000) {
+      console.error('💡 Duplicate key error - user already exists');
+    } else if (error.name === 'ValidationError') {
+      console.error('💡 Validation error:', error.errors);
+    }
+    
+  } finally {
+    // Always close database connection
+    await mongoose.connection.close();
+    console.log('📴 Database connection closed');
+  }
+}
+
+// Run the test
+testUserCreation();
+```
+
+**📋 HOW TO RUN THE TEST:**
+
+1. **Save the test file** as `test/test-user-creation.js`
+2. **Make sure MongoDB is running** on your computer
+3. **Run the test**:
+   ```bash
+   node test/test-user-creation.js
+   ```
+4. **Expected output**:
+   ```
+   🧪 Starting User Model Tests...
+   📞 Connecting to database...
+   ✅ Database connected
+   👤 Creating test user...
+   ✅ User created successfully!
+   📊 User data: { id: '...', username: 'testuser123', ... }
+   🔒 Password hashed: YES
+   🔐 Testing password verification...
+   ✅ Correct password check: PASS
+   ✅ Wrong password check: PASS
+   🔍 Testing user lookup methods...
+   ✅ Find by email: FOUND
+   📈 User statistics: { total: 1, active: 1, verified: 0, inactive: 0 }
+   🕒 Testing last login update...
+   ✅ Last login updated: 2024-01-15T...
+   🧹 Cleaning up test data...
+   ✅ Test user deleted
+   🎉 All User Model tests passed!
+   📴 Database connection closed
+   ```
+
+**🔧 Troubleshooting Common Issues:**
+
+```javascript
+// Error: "MongooseError: Operation users.insertOne() buffering timed out"
+// ↳ Problem: Database not connected
+// ↳ Solution: Make sure MongoDB is running: net start MongoDB
+
+// Error: "E11000 duplicate key error"
+// ↳ Problem: User with same email/username already exists
+// ↳ Solution: Delete existing user or use different email
+
+// Error: "ValidationError: Path username is required"
+// ↳ Problem: Missing required field
+// ↳ Solution: Make sure all required fields are provided
+
+// Error: "bcrypt not found"
+// ↳ Problem: bcrypt package not installed
+// ↳ Solution: npm install bcrypt
+```
+```javascript
+// Let's break down session.model.js line by line:
+
+const mongoose = require('mongoose');
+const { Schema } = mongoose;
+
+// Session schema (like designing a conference room)
+const sessionSchema = new Schema({
+  // Basic Session Info (Like room details)
+  title: {
+    type: String,
+    required: [true, 'Session title is required'],
+    trim: true,
+    maxlength: [100, 'Title cannot exceed 100 characters']
+  },
+  
+  description: {
+    type: String,
+    trim: true,
+    maxlength: [500, 'Description cannot exceed 500 characters'],
+    default: ''
+  },
+  
+  // Technical Details (Like room equipment)
+  language: {
+    type: String,
+    required: [true, 'Programming language is required'],
+    enum: ['javascript', 'python', 'java', 'cpp', 'csharp', 'php', 'ruby', 'go', 'rust'],
+    default: 'javascript'
+  },
+  
+  content: {
+    type: String,              // ↳ The actual code content
+    default: '// Start coding here...\n'
+  },
+  
+  // Ownership & Access (Like room permissions)
+  owner: {
+    type: Schema.Types.ObjectId,  // ↳ Reference to User who created this
+    ref: 'User',               // ↳ Links to User model
+    required: [true, 'Session must have an owner']
+  },
+  
+  collaborators: [{            // ↳ Array of people who can access
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    role: {
+      type: String,
+      enum: ['viewer', 'editor', 'admin'],  // ↳ What they can do
+      default: 'viewer'
+    },
+    joinedAt: {
+      type: Date,
+      default: Date.now
+    },
+    isActive: {                // ↳ Are they currently in the session?
+      type: Boolean,
+      default: false
+    }
+  }],
+  
+  // Session Settings (Like room configuration)
+  isPublic: {
+    type: Boolean,             // ↳ Can anyone join?
+    default: false
+  },
+  
+  isLocked: {
+    type: Boolean,             // ↳ Is session locked from editing?
+    default: false
+  },
+  
+  maxCollaborators: {
+    type: Number,              // ↳ Maximum people allowed
+    default: 10,
+    min: 1,
+    max: 50
+  },
+  
+  // Session State (Like room status)
+  status: {
+    type: String,
+    enum: ['active', 'paused', 'completed', 'archived'],
+    default: 'active'
+  },
+  
+  // Execution History (Like room activity log)
+  executions: [{
+    code: String,              // ↳ What code was run
+    output: String,            // ↳ What was the result
+    error: String,             // ↳ Any errors that occurred
+    executedBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    executedAt: {
+      type: Date,
+      default: Date.now
+    },
+    executionTime: Number,     // ↳ How long it took (milliseconds)
+    language: String           // ↳ What language was used
+  }],
+  
+  // Session Metadata (Like room facilities)
+  metadata: {
+    totalExecutions: {         // ↳ How many times code was run
+      type: Number,
+      default: 0
+    },
+    totalEdits: {              // ↳ How many times content was changed
+      type: Number,
+      default: 0
+    },
+    averageExecutionTime: {    // ↳ Average time for code execution
+      type: Number,
+      default: 0
+    },
+    lastActivity: {            // ↳ When was last activity
+      type: Date,
+      default: Date.now
+    }
+  },
+  
+  // Automatic Timestamps
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  
+  updatedAt: {
+    type: Date,
+    default: Date.now
+  }
+}, {
+  timestamps: true,
+  versionKey: false
+});
+
+// SESSION METHODS (Like special room features)
+sessionSchema.methods.addCollaborator = async function(userId, role = 'viewer') {
+  // Check if user is already a collaborator
+  const existingCollaborator = this.collaborators.find(
+    c => c.userId.toString() === userId.toString()
+  );
+  
+  if (existingCollaborator) {
+    throw new Error('User is already a collaborator');
+  }
+  
+  // Check if we're at capacity
+  if (this.collaborators.length >= this.maxCollaborators) {
+    throw new Error('Session is at maximum capacity');
+  }
+  
+  // Add the collaborator
+  this.collaborators.push({
+    userId,
+    role,
+    joinedAt: new Date(),
+    isActive: false
+  });
+  
+  return await this.save();
+};
+
+sessionSchema.methods.removeCollaborator = async function(userId) {
+  this.collaborators = this.collaborators.filter(
+    c => c.userId.toString() !== userId.toString()
+  );
+  return await this.save();
+};
+
+sessionSchema.methods.updateActivity = async function() {
+  this.metadata.lastActivity = new Date();
+  this.metadata.totalEdits += 1;
+  return await this.save();
+};
+
+sessionSchema.methods.addExecution = async function(executionData) {
+  // Add new execution to history
+  this.executions.push(executionData);
+  
+  // Update metadata
+  this.metadata.totalExecutions += 1;
+  this.metadata.lastActivity = new Date();
+  
+  // Calculate average execution time
+  const totalTime = this.executions.reduce((sum, exec) => sum + (exec.executionTime || 0), 0);
+  this.metadata.averageExecutionTime = totalTime / this.executions.length;
+  
+  return await this.save();
+};
+
+// STATIC METHODS (Like session factory features)
+sessionSchema.statics.findPublicSessions = function(page = 1, limit = 10) {
+  const skip = (page - 1) * limit;
+  return this.find({ isPublic: true, status: 'active' })
+    .populate('owner', 'username')
+    .select('title description language createdAt metadata')
+    .sort({ 'metadata.lastActivity': -1 })
+    .skip(skip)
+    .limit(limit);
+};
+
+sessionSchema.statics.findUserSessions = function(userId, page = 1, limit = 10) {
+  const skip = (page - 1) * limit;
+  return this.find({
+    $or: [
+      { owner: userId },
+      { 'collaborators.userId': userId }
+    ]
+  })
+    .populate('owner', 'username')
+    .sort({ updatedAt: -1 })
+    .skip(skip)
+    .limit(limit);
+};
+
+// INDEXES FOR PERFORMANCE
+sessionSchema.index({ owner: 1, createdAt: -1 });           // ↳ Fast owner session queries
+sessionSchema.index({ 'collaborators.userId': 1 });        // ↳ Fast collaborator queries
+sessionSchema.index({ isPublic: 1, status: 1 });           // ↳ Fast public session queries
+sessionSchema.index({ language: 1, isPublic: 1 });         // ↳ Fast language filter queries
+sessionSchema.index({ 'metadata.lastActivity': -1 });      // ↳ Fast recent activity queries
+
+const Session = mongoose.model('Session', sessionSchema);
+module.exports = Session;
+```
+
+---
+
+#### **📊 Step 5.4: Log Model - Activity Tracking System**
+
+**📁 FILE: `models/log.model.js`**
+**🎯 PURPOSE: Track all system activities for debugging and monitoring**
+**🔗 CONNECTS TO: models/user.model.js, models/session.model.js, controllers/*.js**
+
+```javascript
+// 📁 FILE: models/log.model.js
+// 🎯 PURPOSE: Define schema for activity logging
+// 🔗 IMPORTS: mongoose
+// 🔗 USED BY: All controllers, middleware/error.middleware.js, utils/logger.js
+
+const mongoose = require('mongoose');
+
+// 📊 Log Schema - Like a security camera system for your app
+const logSchema = new mongoose.Schema({
+  // 🏷️ Log Classification
+  level: {
+    type: String,
+    enum: ['info', 'warn', 'error', 'debug', 'security'],
+    default: 'info',
+    index: true  // ← For filtering logs by severity
+  },
+  
+  // 📝 Log Content
+  message: {
+    type: String,
+    required: true,
+    trim: true,
+    maxlength: 2000
+  },
+  
+  // 🎯 Action Tracking
+  action: {
+    type: String,
+    required: true,
+    enum: [
+      'user_login', 'user_logout', 'user_register',
+      'session_create', 'session_end', 'session_pause',
+      'code_execute', 'file_upload', 'file_download',
+      'api_request', 'database_query', 'error_occurred',
+      'system_start', 'system_shutdown'
+    ],
+    index: true
+  },
+  
+  // 🔗 Related Entity References
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null,  // ← null for system-level logs
+    index: true
+  },
+  
+  sessionId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Session',
+    default: null,  // ← null if not session-related
+    index: true
+  },
+  
+  // 🌐 Request Information
+  requestInfo: {
+    method: {
+      type: String,
+      enum: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+      default: null
+    },
+    url: {
+      type: String,
+      maxlength: 500
+    },
+    statusCode: {
+      type: Number,
+      min: 100,
+      max: 599
+    },
+    responseTime: {
+      type: Number,  // ← in milliseconds
+      min: 0
+    },
+    userAgent: {
+      type: String,
+      maxlength: 500
+    },
+    ip: {
+      type: String,
+      maxlength: 45  // ← IPv6 max length
+    }
+  },
+  
+  // 📊 Additional Data
+  metadata: {
+    type: mongoose.Schema.Types.Mixed,  // ← Flexible object for extra data
+    default: {}
+  },
+  
+  // 🚨 Error Information (if log is error type)
+  error: {
+    name: String,
+    message: String,
+    stack: String,
+    code: String
+  },
+  
+  // 🏷️ Categorization
+  tags: [{
+    type: String,
+    trim: true,
+    maxlength: 50
+  }],
+  
+  // 🕒 Timing
+  timestamp: {
+    type: Date,
+    default: Date.now,
+    index: true  // ← For time-based queries
+  },
+  
+  // 📍 Source Information
+  source: {
+    file: String,      // ← Which file generated this log
+    function: String,  // ← Which function generated this log
+    line: Number       // ← Which line number
+  }
+  
+}, {
+  timestamps: false,  // ← We use custom timestamp field
+  
+  // 📊 Additional Options
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
+});
+
+// 🔧 VIRTUAL FIELDS - Computed properties
+
+// 📅 Formatted timestamp
+logSchema.virtual('formattedTime').get(function() {
+  return {
+    iso: this.timestamp.toISOString(),
+    readable: this.timestamp.toLocaleString(),
+    relative: this.getTimeAgo()
+  };
+});
+
+// 🎯 Log severity level as number
+logSchema.virtual('severityLevel').get(function() {
+  const levels = {
+    'debug': 1,
+    'info': 2,
+    'warn': 3,
+    'error': 4,
+    'security': 5
+  };
+  return levels[this.level] || 0;
+});
+
+// 📊 Log summary
+logSchema.virtual('summary').get(function() {
+  return {
+    id: this._id,
+    level: this.level,
+    action: this.action,
+    message: this.message.substring(0, 100) + (this.message.length > 100 ? '...' : ''),
+    timestamp: this.formattedTime.readable,
+    userId: this.userId,
+    sessionId: this.sessionId
+  };
+});
+
+// 🔧 INSTANCE METHODS
+
+// 🕒 Get relative time (e.g., "2 hours ago")
+logSchema.methods.getTimeAgo = function() {
+  const now = new Date();
+  const diffMs = now - this.timestamp;
+  
+  const diffSeconds = Math.floor(diffMs / 1000);
+  const diffMinutes = Math.floor(diffSeconds / 60);
+  const diffHours = Math.floor(diffMinutes / 60);
+  const diffDays = Math.floor(diffHours / 24);
+  
+  if (diffDays > 0) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+  if (diffHours > 0) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+  if (diffMinutes > 0) return `${diffMinutes} minute${diffMinutes > 1 ? 's' : ''} ago`;
+  return `${diffSeconds} second${diffSeconds > 1 ? 's' : ''} ago`;
+};
+
+// 🏷️ Add tags to log
+logSchema.methods.addTags = function(newTags) {
+  if (Array.isArray(newTags)) {
+    this.tags = [...new Set([...this.tags, ...newTags])];  // ← Remove duplicates
+  } else {
+    this.tags.push(newTags);
+  }
+  return this.save();
+};
+
+// 📝 Update metadata
+logSchema.methods.addMetadata = function(key, value) {
+  if (!this.metadata) this.metadata = {};
+  this.metadata[key] = value;
+  this.markModified('metadata');  // ← Tell mongoose metadata changed
+  return this.save();
+};
+
+// 🔧 STATIC METHODS - Functions for querying logs
+
+// 📊 Get logs by level
+logSchema.statics.findByLevel = function(level) {
+  return this.find({ level })
+    .populate('userId', 'username email')
+    .populate('sessionId', 'sessionId language')
+    .sort({ timestamp: -1 });
+};
+
+// 👤 Get user activity logs
+logSchema.statics.findByUser = function(userId, limit = 50) {
+  return this.find({ userId })
+    .populate('sessionId', 'sessionId language status')
+    .sort({ timestamp: -1 })
+    .limit(limit);
+};
+
+// 📅 Get logs by date range
+logSchema.statics.findByDateRange = function(startDate, endDate) {
+  return this.find({
+    timestamp: {
+      $gte: startDate,
+      $lte: endDate
+    }
+  }).sort({ timestamp: -1 });
+};
+
+// 🚨 Get error logs only
+logSchema.statics.getErrorLogs = function(limit = 100) {
+  return this.find({ level: 'error' })
+    .populate('userId', 'username')
+    .sort({ timestamp: -1 })
+    .limit(limit);
+};
+
+// 🔍 Search logs by message
+logSchema.statics.searchLogs = function(searchTerm, limit = 50) {
+  return this.find({
+    $or: [
+      { message: { $regex: searchTerm, $options: 'i' } },
+      { action: { $regex: searchTerm, $options: 'i' } },
+      { tags: { $in: [new RegExp(searchTerm, 'i')] } }
+    ]
+  })
+  .populate('userId', 'username')
+  .sort({ timestamp: -1 })
+  .limit(limit);
+};
+
+// 📈 Get activity statistics
+logSchema.statics.getActivityStats = function(hours = 24) {
+  const startTime = new Date(Date.now() - hours * 60 * 60 * 1000);
+  
+  return this.aggregate([
+    { $match: { timestamp: { $gte: startTime } } },
+    {
+      $group: {
+        _id: {
+          level: '$level',
+          action: '$action'
+        },
+        count: { $sum: 1 },
+        latestTime: { $max: '$timestamp' }
+      }
+    },
+    { $sort: { count: -1 } }
+  ]);
+};
+
+// 🏆 Get top active users
+logSchema.statics.getTopActiveUsers = function(limit = 10) {
+  return this.aggregate([
+    { $match: { userId: { $ne: null } } },
+    {
+      $group: {
+        _id: '$userId',
+        activityCount: { $sum: 1 },
+        lastActivity: { $max: '$timestamp' },
+        actions: { $addToSet: '$action' }
+      }
+    },
+    { $sort: { activityCount: -1 } },
+    { $limit: limit },
+    {
+      $lookup: {
+        from: 'users',
+        localField: '_id',
+        foreignField: '_id',
+        as: 'user'
+      }
+    },
+    { $unwind: '$user' }
+  ]);
+};
+
+// 🧹 Clean up old logs (keep only recent ones)
+logSchema.statics.cleanupOldLogs = function(daysToKeep = 30) {
+  const cutoffDate = new Date(Date.now() - daysToKeep * 24 * 60 * 60 * 1000);
+  
+  return this.deleteMany({
+    timestamp: { $lt: cutoffDate },
+    level: { $nin: ['error', 'security'] }  // ← Keep error and security logs longer
+  });
+};
+
+// 🚨 Log helper methods for easy logging
+logSchema.statics.logInfo = function(message, userId = null, metadata = {}) {
+  return this.create({
+    level: 'info',
+    message,
+    action: 'api_request',
+    userId,
+    metadata
+  });
+};
+
+logSchema.statics.logError = function(error, userId = null, requestInfo = {}) {
+  return this.create({
+    level: 'error',
+    message: error.message,
+    action: 'error_occurred',
+    userId,
+    requestInfo,
+    error: {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+      code: error.code
+    }
+  });
+};
+
+logSchema.statics.logUserAction = function(action, userId, message, metadata = {}) {
+  return this.create({
+    level: 'info',
+    message,
+    action,
+    userId,
+    metadata
+  });
+};
+
+// 🏷️ MIDDLEWARE
+
+// 📝 Pre-save validation
+logSchema.pre('save', function(next) {
+  // 🔍 Ensure message is not empty
+  if (!this.message || this.message.trim().length === 0) {
+    return next(new Error('Log message cannot be empty'));
+  }
+  
+  // 🕒 Set timestamp if not provided
+  if (!this.timestamp) {
+    this.timestamp = new Date();
+  }
+  
+  next();
+});
+
+// 🔍 INDEXES for fast queries
+logSchema.index({ level: 1, timestamp: -1 });           // ← Level + time queries
+logSchema.index({ userId: 1, timestamp: -1 });          // ← User activity tracking
+logSchema.index({ action: 1, timestamp: -1 });          // ← Action-based filtering
+logSchema.index({ timestamp: -1 });                     // ← Recent logs first
+logSchema.index({ 'requestInfo.statusCode': 1 });       // ← HTTP status filtering
+logSchema.index({ tags: 1 });                           // ← Tag-based searching
+
+// 📤 Export the model
+module.exports = mongoose.model('Log', logSchema);
+```
+
+**🔗 Log Model Connection Flow:**
+
+```
+📊 System Activity
+    ↓
+📁 utils/logger.js (helper functions)
+    ↓ creates log entries
+    ↓
+📁 models/log.model.js (stores logs)
+    ↓ connects to
+    ↓
+📁 controllers/*.js (read logs for admin)
+    ↓ serves logs via
+    ↓
+📁 api/admin.routes.js (log endpoints)
+    ↓ accessible through
+    ↓
+🌐 Admin dashboard (view system health)
+```
+
+**📋 Log Model Usage Examples:**
+
+```javascript
+// 📁 In controllers/auth.controller.js
+
+const Log = require('../models/log.model');
+
+// Log successful login
+await Log.logUserAction(
+  'user_login', 
+  user._id, 
+  `User ${user.username} logged in successfully`,
+  { ip: req.ip, userAgent: req.get('User-Agent') }
+);
+
+// Log error
+await Log.logError(error, req.user?.id, {
+  method: req.method,
+  url: req.originalUrl,
+  statusCode: 500
+});
+
+// Get user activity
+const userLogs = await Log.findByUser(userId, 20);
+
+// Get error summary
+const errors = await Log.getErrorLogs(10);
+```
+
+**🧪 Testing Log Model:**
+
+```javascript
+// 📁 FILE: test/test-log-model.js
+
+const Log = require('../models/log.model');
+
+// Test creating different log types
+const infoLog = await Log.logInfo('System started', null, { version: '1.0.0' });
+const errorLog = await Log.logError(new Error('Test error'), userId);
+
+// Test querying logs
+const recentLogs = await Log.findByLevel('error');
+const userActivity = await Log.findByUser(userId);
+const stats = await Log.getActivityStats(24);
+
+console.log('Log tests completed!');
+```
+  level: {
+    type: String,
+    enum: ['info', 'warn', 'error', 'debug', 'security'],
+    required: [true, 'Log level is required'],
+    default: 'info'
+  },
+  
+  // Event Details (Like what happened)
+  event: {
+    type: String,              // ↳ Type of event: 'user_login', 'session_created', etc.
+    required: [true, 'Event type is required']
+  },
+  
+  message: {
+    type: String,              // ↳ Human-readable description
+    required: [true, 'Log message is required']
+  },
+  
+  // Who & Where (Like event context)
+  userId: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+    default: null              // ↳ null for system events
+  },
+  
+  sessionId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Session',
+    default: null              // ↳ null if not session-related
+  },
+  
+  // Technical Details (Like forensic data)
+  metadata: {
+    ip: String,                // ↳ User's IP address
+    userAgent: String,         // ↳ Browser/device info
+    action: String,            // ↳ Specific action taken
+    resource: String,          // ↳ What was affected
+    statusCode: Number,        // ↳ HTTP status code
+    responseTime: Number,      // ↳ How long operation took
+    errorStack: String,        // ↳ Full error details (for errors)
+    additionalData: Schema.Types.Mixed  // ↳ Any extra relevant data
+  },
+  
+  // Automatic Timestamp
+  timestamp: {
+    type: Date,
+    default: Date.now,
+    expires: 2592000           // ↳ Auto-delete after 30 days (TTL index)
+  }
+}, {
+  timestamps: false,           // ↳ We use custom timestamp field
+  versionKey: false
+});
+
+// LOG METHODS
+logSchema.statics.logEvent = async function(eventData) {
+  // Helper method to create logs easily
+  const log = new this(eventData);
+  return await log.save();
+};
+
+logSchema.statics.getUserActivity = function(userId, startDate, endDate) {
+  const query = { userId };
+  
+  if (startDate || endDate) {
+    query.timestamp = {};
+    if (startDate) query.timestamp.$gte = startDate;
+    if (endDate) query.timestamp.$lte = endDate;
+  }
+  
+  return this.find(query)
+    .sort({ timestamp: -1 })
+    .populate('sessionId', 'title');
+};
+
+sessionSchema.statics.getErrorLogs = function(limit = 100) {
+  return this.find({ level: 'error' })
+    .sort({ timestamp: -1 })
+    .limit(limit)
+    .populate('userId', 'username');
+};
+
+// INDEXES FOR PERFORMANCE  
+logSchema.index({ timestamp: 1 }, { expireAfterSeconds: 2592000 }); // ↳ TTL index for auto-cleanup
+logSchema.index({ userId: 1, timestamp: -1 });                     // ↳ Fast user activity queries
+logSchema.index({ sessionId: 1, timestamp: -1 });                  // ↳ Fast session activity queries
+logSchema.index({ level: 1, timestamp: -1 });                      // ↳ Fast error log queries
+logSchema.index({ event: 1, timestamp: -1 });                      // ↳ Fast event type queries
+
+const Log = mongoose.model('Log', logSchema);
+module.exports = Log;
+```
+
+**🔗 HOW MODELS CONNECT TO EACH OTHER:**
+
+```
+DATA RELATIONSHIP FLOW (Like Family Tree):
+
+👤 USER (Parent)
+├── 📊 owns multiple SESSIONS (Children)
+│   ├── Session 1: "My JavaScript Project"
+│   ├── Session 2: "Python Learning"
+│   └── Session 3: "Team Collaboration"
+│
+├── 👥 collaborates on other SESSIONS (Step-children)
+│   ├── Friend's Session: "React Tutorial"
+│   └── Work Session: "Backend API"
+│
+└── 📝 generates multiple LOGS (Activity Records)
+    ├── Log 1: "User logged in"
+    ├── Log 2: "Created new session"
+    ├── Log 3: "Executed Python code"
+    └── Log 4: "Joined collaboration"
+
+🔗 MONGODB REFERENCES (Like ID Cards):
+- User._id → Session.owner (ownership link)
+- User._id → Session.collaborators.userId (collaboration link)  
+- User._id → Log.userId (activity link)
+- Session._id → Log.sessionId (session activity link)
+```
+
+**🎯 Learning Exercises (Hands-On Practice):**
+
+**Exercise 1: Create Your First User**
+```javascript
+// test-user-creation.js
+const mongoose = require('mongoose');
+const User = require('./models/user.model');
+const { connectDB } = require('./config/db.config');
+
+async function createTestUser() {
+  try {
+    // Connect to database
+    await connectDB();
+    
+    // Create a new user
+    const newUser = new User({
+      username: 'testuser',
+      email: 'test@example.com',
+      password: 'securepassword123'  // Will be automatically hashed
+    });
+    
+    // Save to database
+    const savedUser = await newUser.save();
+    console.log('✅ User created:', savedUser.getPublicProfile());
+    
+    // Test password comparison
+    const isValidPassword = await savedUser.comparePassword('securepassword123');
+    console.log('🔒 Password check:', isValidPassword ? 'PASS' : 'FAIL');
+    
+  } catch (error) {
+    console.error('❌ Error:', error.message);
+  } finally {
+    mongoose.connection.close();
+  }
+}
+
+createTestUser();
+```
+
+**Exercise 2: Create a Coding Session**
+```javascript
+// test-session-creation.js
+const mongoose = require('mongoose');
+const User = require('./models/user.model');
+const Session = require('./models/session.model');
+const { connectDB } = require('./config/db.config');
+
+async function createTestSession() {
+  try {
+    await connectDB();
+    
+    // Find a user (or create one)
+    let user = await User.findOne({ username: 'testuser' });
+    if (!user) {
+      user = new User({
+        username: 'testuser',
+        email: 'test@example.com',
+        password: 'securepassword123'
+      });
+      await user.save();
+    }
+    
+    // Create a session
+    const newSession = new Session({
+      title: 'My First JavaScript Session',
+      description: 'Learning JavaScript basics',
+      language: 'javascript',
+      content: 'console.log("Hello, World!");',
+      owner: user._id
+    });
+    
+    const savedSession = await newSession.save();
+    console.log('✅ Session created:', savedSession.title);
+    
+    // Add a collaborator
+    await savedSession.addCollaborator(user._id, 'editor');
+    console.log('👥 Collaborator added');
+    
+  } catch (error) {
+    console.error('❌ Error:', error.message);
+  } finally {
+    mongoose.connection.close();
+  }
+}
+
+createTestSession();
+```
+
+**Exercise 3: Log Activities**
+```javascript
+// test-logging.js
+const mongoose = require('mongoose');
+const Log = require('./models/log.model');
+const { connectDB } = require('./config/db.config');
+
+async function createTestLogs() {
+  try {
+    await connectDB();
+    
+    // Log different types of activities
+    await Log.logEvent({
+      level: 'info',
+      event: 'user_login',
+      message: 'User successfully logged in',
+      metadata: {
+        ip: '192.168.1.100',
+        userAgent: 'Mozilla/5.0...'
       }
     });
     
-    // Create indexes for performance
-    await db.collection('users').createIndex({ email: 1 }, { unique: true });
-    await db.collection('users').createIndex({ username: 1 }, { unique: true });
-  },
+    await Log.logEvent({
+      level: 'error',
+      event: 'code_execution_failed',
+      message: 'Python code execution failed with syntax error',
+      metadata: {
+        errorStack: 'SyntaxError: invalid syntax',
+        code: 'print("Hello World"'
+      }
+    });
+    
+    console.log('✅ Logs created successfully');
+    
+    // Query recent logs
+    const recentLogs = await Log.find()
+      .sort({ timestamp: -1 })
+      .limit(5);
+    
+    console.log('📝 Recent logs:', recentLogs.length);
+    
+  } catch (error) {
+    console.error('❌ Error:', error.message);
+  } finally {
+    mongoose.connection.close();
+  }
+}
+
+createTestLogs();
+```
+
+---
+
+### **Step 6: Database Queries & Operations - THE LANGUAGE**
+
+#### **📖 Understanding MongoDB Queries (Like Learning a New Language)**
+
+**Think of database queries like ASKING QUESTIONS in different ways:**
+- **English**: "Find all users who signed up last week"
+- **MongoDB**: `db.users.find({ createdAt: { $gte: lastWeek } })`
+- **Mongoose**: `User.find({ createdAt: { $gte: lastWeek } })`
+
+**Basic Query Operations (Like Basic Conversations):**
+```javascript
+// CRUD Operations (Create, Read, Update, Delete) - The Basics:
+
+// 1. CREATE (Like adding new contact to phone book)
+const createUser = async (userData) => {
+  try {
+    // Method 1: Using constructor + save
+    const newUser = new User(userData);
+    const savedUser = await newUser.save();
+    
+    // Method 2: Using create (shorthand)
+    const savedUser2 = await User.create(userData);
+    
+    console.log('✅ User created:', savedUser.username);
+    return savedUser;
+    
+  } catch (error) {
+    if (error.code === 11000) {
+      // Duplicate key error (email or username already exists)
+      throw new Error('Email or username already exists');
+    }
+    throw error;
+  }
+};
+
+// 2. READ/FIND (Like looking up contacts)
+const findUsers = async () => {
+  // Find all users
+  const allUsers = await User.find();                    // Gets everyone
   
-  down: async () => {
-    // What to do when rolling back this migration
-    await db.collection('users').drop();
+  // Find specific user
+  const specificUser = await User.findById(userId);      // Find by ID
+  const userByEmail = await User.findOne({ email });     // Find by email
+  
+  // Find with conditions
+  const activeUsers = await User.find({ isActive: true }); // Only active users
+  const recentUsers = await User.find({
+    createdAt: { $gte: new Date('2024-01-01') }          // Users since Jan 1, 2024
+  });
+  
+  // Find with pagination
+  const page = 1;
+  const limit = 10;
+  const skip = (page - 1) * limit;
+  const paginatedUsers = await User.find()
+    .skip(skip)                                          // Skip first 10 users
+    .limit(limit)                                        // Take next 10 users
+    .sort({ createdAt: -1 });                           // Newest first
+  
+  // Find with specific fields only
+  const usernamesOnly = await User.find()
+    .select('username email')                            // Only get username and email
+    .select('-password');                                // Exclude password field
+  
+  return { allUsers, specificUser, activeUsers, recentUsers };
+};
+
+// 3. UPDATE (Like editing contact info)
+const updateUser = async (userId, updateData) => {
+  try {
+    // Method 1: findByIdAndUpdate
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      updateData,
+      { 
+        new: true,                                       // Return updated document
+        runValidators: true                              // Run schema validations
+      }
+    );
+    
+    // Method 2: Find then save (for complex updates)
+    const user = await User.findById(userId);
+    user.preferences.theme = 'dark';
+    user.lastLoginAt = new Date();
+    await user.save();
+    
+    // Method 3: updateMany (update multiple documents)
+    await User.updateMany(
+      { isActive: false },                               // Find inactive users
+      { $set: { status: 'archived' } }                  // Set status to archived
+    );
+    
+    console.log('✅ User updated:', updatedUser.username);
+    return updatedUser;
+    
+  } catch (error) {
+    throw error;
+  }
+};
+
+// 4. DELETE (Like removing contact)
+const deleteUser = async (userId) => {
+  try {
+    // Method 1: findByIdAndDelete
+    const deletedUser = await User.findByIdAndDelete(userId);
+    
+    // Method 2: deleteOne
+    await User.deleteOne({ _id: userId });
+    
+    // Method 3: deleteMany (delete multiple)
+    await User.deleteMany({ isActive: false });         // Delete all inactive users
+    
+    console.log('✅ User deleted:', deletedUser?.username || 'User not found');
+    return deletedUser;
+    
+  } catch (error) {
+    throw error;
   }
 };
 ```
 
-**Migration Best Practices:**
+**Advanced Query Patterns (Like Advanced Conversations):**
 ```javascript
-// Good migration practices:
-1. Always make migrations reversible (have both 'up' and 'down')
-2. Test migrations on backup data first
-3. Run migrations during low-traffic times
-4. Keep migrations small and focused
-5. Never modify existing migration files (create new ones instead)
+// COMPLEX QUERIES (Like detailed questions)
 
-// Example migration workflow:
-migrations/
-├── 001_create_users.js           // Initial user table
-├── 002_add_user_preferences.js   // Add preferences field
-├── 003_create_sessions.js        // Add sessions table
-├── 004_add_session_metadata.js   // Add metadata to sessions
-└── 005_create_logs.js            // Add logging table
-```
+// 1. AGGREGATION (Like asking for statistics)
+const getUserStatistics = async () => {
+  const stats = await User.aggregate([
+    // Stage 1: Match active users only
+    { $match: { isActive: true } },
+    
+    // Stage 2: Group by role and count
+    {
+      $group: {
+        _id: '$role',                                    // Group by role field
+        count: { $sum: 1 },                            // Count documents in each group
+        avgAge: { $avg: '$age' },                      // Average age per role
+        emails: { $push: '$email' }                    // Collect all emails
+      }
+    },
+    
+    // Stage 3: Sort by count
+    { $sort: { count: -1 } }
+  ]);
+  
+  return stats;
+  // Result: [
+  //   { _id: 'user', count: 150, avgAge: 25.5, emails: [...] },
+  //   { _id: 'admin', count: 5, avgAge: 35.2, emails: [...] }
+  // ]
+};
 
-**Schema Versioning Strategy:**
-```javascript
-// Handling schema changes without breaking existing data:
-const userSchema = new mongoose.Schema({
-  username: String,
-  email: String,
-  password: String,
-  schemaVersion: { type: Number, default: 1 }, // Track version
+// 2. POPULATION (Like joining related data)
+const getSessionsWithOwnerInfo = async () => {
+  const sessions = await Session.find()
+    .populate('owner', 'username email')               // Include owner details
+    .populate('collaborators.userId', 'username')      // Include collaborator details
+    .exec();
   
-  // Version 1 fields
-  createdAt: Date,
-  
-  // Version 2 fields (added later)
-  preferences: {
-    theme: String,
-    notifications: Boolean
-  },
-  
-  // Version 3 fields (added even later)
-  profile: {
-    avatar: String,
-    bio: String
-  }
-});
+  return sessions;
+  // Result: Sessions with full user objects instead of just IDs
+};
 
-// Handle different versions in your code:
-userSchema.methods.migrateToLatest = function() {
-  if (this.schemaVersion < 2) {
-    this.preferences = { theme: 'light', notifications: true };
+// 3. COMPLEX FILTERING (Like detailed search)
+const searchSessions = async (searchParams) => {
+  const { keyword, language, isPublic, dateRange } = searchParams;
+  
+  // Build dynamic query
+  const query = {};
+  
+  // Text search in title and description
+  if (keyword) {
+    query.$or = [
+      { title: { $regex: keyword, $options: 'i' } },   // Case-insensitive search
+      { description: { $regex: keyword, $options: 'i' } }
+    ];
   }
-  if (this.schemaVersion < 3) {
-    this.profile = { avatar: null, bio: '' };
+  
+  // Filter by language
+  if (language) {
+    query.language = language;
   }
-  this.schemaVersion = 3;
+  
+  // Filter by public/private
+  if (typeof isPublic === 'boolean') {
+    query.isPublic = isPublic;
+  }
+  
+  // Filter by date range
+  if (dateRange) {
+    query.createdAt = {};
+    if (dateRange.start) query.createdAt.$gte = new Date(dateRange.start);
+    if (dateRange.end) query.createdAt.$lte = new Date(dateRange.end);
+  }
+  
+  const sessions = await Session.find(query)
+    .populate('owner', 'username')
+    .sort({ 'metadata.lastActivity': -1 })
+    .limit(20);
+  
+  return sessions;
+};
+
+// 4. TRANSACTION OPERATIONS (Like bank transactions - all or nothing)
+const transferSessionOwnership = async (sessionId, currentOwnerId, newOwnerId) => {
+  const session = await mongoose.startSession();
+  
+  try {
+    await session.withTransaction(async () => {
+      // Step 1: Verify current owner
+      const sessionDoc = await Session.findById(sessionId).session(session);
+      if (sessionDoc.owner.toString() !== currentOwnerId) {
+        throw new Error('Not authorized to transfer this session');
+      }
+      
+      // Step 2: Update session owner
+      await Session.findByIdAndUpdate(
+        sessionId,
+        { owner: newOwnerId },
+        { session }
+      );
+      
+      // Step 3: Log the transfer
+      await Log.create([{
+        level: 'info',
+        event: 'session_ownership_transferred',
+        message: `Session ownership transferred from ${currentOwnerId} to ${newOwnerId}`,
+        sessionId: sessionId,
+        metadata: {
+          previousOwner: currentOwnerId,
+          newOwner: newOwnerId
+        }
+      }], { session });
+      
+      console.log('✅ Session ownership transferred successfully');
+    });
+  } catch (error) {
+    console.error('❌ Transfer failed:', error.message);
+    throw error;
+  } finally {
+    await session.endSession();
+  }
 };
 ```
 
-**🎯 Migration Learning Tasks:**
-1. **Create a migration system** for your project
-2. **Practice adding new fields** to existing collections
-3. **Learn to handle data transformation** during migrations
-4. **Test rollback procedures** to ensure they work
-5. **Set up automated migration** running in deployment
-
----
-
-### **Step 5.5: Database Performance & Optimization**
-
-#### **⚡ Making Your Database Lightning Fast (Like Organizing Your Storage Room):**
-
-**Database Indexes (Like Library Card Catalogs):**
+**Query Performance Optimization (Like Making Conversations Faster):**
 ```javascript
-// Without index (like searching through every book):
-db.users.find({ email: "john@example.com" }) 
-// Database checks every single user record = SLOW
+// PERFORMANCE BEST PRACTICES:
 
-// With index (like using card catalog):
-db.users.createIndex({ email: 1 })
-db.users.find({ email: "john@example.com" })
-// Database goes directly to the right record = FAST
+// 1. USE INDEXES (Like having a phone book organized alphabetically)
+// Already defined in our schemas, but here's how they help:
 
-// Common indexes for your project:
-userSchema.index({ email: 1 }, { unique: true });        // Fast login lookup
-userSchema.index({ username: 1 }, { unique: true });     // Fast username check
-sessionSchema.index({ userId: 1, createdAt: -1 });       // Fast user session list
-sessionSchema.index({ 'collaborators.userId': 1 });      // Fast collaborator lookup
-logSchema.index({ timestamp: 1 }, { expireAfterSeconds: 2592000 }); // Auto-cleanup old logs
+// Bad: Scan all users to find by email (SLOW)
+const userSlow = await User.find({ email: 'john@example.com' });
+
+// Good: Use email index to find instantly (FAST)
+// This automatically uses the index we created: userSchema.index({ email: 1 })
+
+// 2. LIMIT RESULTS (Like asking for "first 10" instead of "all")
+// Bad: Get all sessions (could be millions)
+const allSessions = await Session.find();
+
+// Good: Get only what you need
+const sessions = await Session.find()
+  .limit(20)                                             // Only 20 results
+  .select('title language createdAt')                    // Only specific fields
+  .lean();                                               // Return plain objects (faster)
+
+// 3. USE EXPLAIN TO UNDERSTAND QUERIES
+const explanation = await User.find({ email: 'john@example.com' }).explain('executionStats');
+console.log('Query explanation:', explanation);
+// This shows you:
+// - Did it use an index?
+// - How many documents were scanned?
+// - How long did it take?
+
+// 4. BATCH OPERATIONS (Like processing multiple requests together)
+// Bad: Insert one user at a time
+for (const userData of userList) {
+  await User.create(userData);                           // Multiple database calls
+}
+
+// Good: Insert all users at once
+await User.insertMany(userList);                        // Single database call
+
+// 5. PROJECTION (Like asking for specific info only)
+// Bad: Get full user objects when you only need names
+const users = await User.find();
+const usernames = users.map(u => u.username);
+
+// Good: Get only usernames from database
+const usernames = await User.find()
+  .select('username')                                    // Only username field
+  .lean();                                               // Plain objects
 ```
-
-**Query Optimization Patterns:**
-```javascript
-// Bad queries (slow and inefficient):
-const allUsers = await User.find({});                    // Loads ALL users
-const user = await User.findOne({ email }).populate('sessions'); // Loads all session data
-
-// Good queries (fast and efficient):
-const users = await User.find({})                        // Only load what you need
-  .limit(10)                                             // Limit results
-  .select('username email createdAt')                    // Only needed fields
-  .sort({ createdAt: -1 });                             // Sort efficiently
-
-const user = await User.findOne({ email })               // Load user first
-  .select('username email preferences');                 // Only needed fields
-const sessionCount = await Session.countDocuments({ userId: user._id }); // Count instead of loading
-```
-
-**Connection Pooling Deep Dive:**
-```javascript
-// Database connections are expensive (like phone calls):
-// Bad: Create new connection for each request
-// Good: Reuse existing connections from a pool
-
-mongoose.connect(DATABASE_URL, {
-  // Connection pool settings:
-  maxPoolSize: 10,          // Maximum 10 connections in pool
-  serverSelectionTimeoutMS: 5000,  // Wait 5 seconds to find server
-  socketTimeoutMS: 45000,   // Close sockets after 45 seconds
-  bufferMaxEntries: 0,      // Disable mongoose buffering
-  bufferCommands: false,    // Disable mongoose buffering
-});
-
-// Monitor connection pool:
-mongoose.connection.on('connected', () => {
-  console.log('✅ MongoDB connected');
-});
-
-mongoose.connection.on('error', (err) => {
-  console.error('❌ MongoDB error:', err);
-});
-
-mongoose.connection.on('disconnected', () => {
-  console.log('📴 MongoDB disconnected');
-});
-```
-
-**Database Performance Monitoring:**
-```javascript
-// Enable MongoDB profiling to see slow queries:
-db.setProfilingLevel(2, { slowms: 100 }); // Log queries taking >100ms
-
-// Query profiling in your code:
-const startTime = Date.now();
-const result = await User.find({ email });
-const endTime = Date.now();
-console.log(`Query took ${endTime - startTime}ms`);
-
-// Use explain() to understand query performance:
-const explanation = await User.find({ email }).explain('executionStats');
-console.log('Query execution stats:', explanation);
-```
-
-**🎯 Performance Learning Tasks:**
-1. **Create indexes** for all your query patterns
-2. **Use MongoDB Compass** to analyze query performance
-3. **Set up query profiling** to catch slow queries
-4. **Practice query optimization** with large datasets
-5. **Monitor connection pool** usage in production
-
----
-
-#### **📊 Understanding Your Data Models:**
-
-**models/user.model.js - User Management:**
-```javascript
-// User Schema breakdown:
-const userSchema = new mongoose.Schema({
-  username: { type: String, required: true, unique: true },  // Login identifier
-  email: { type: String, required: true, unique: true },     // Contact & login
-  password: { type: String, required: true, minlength: 8 }, // Hashed password
-  role: { type: String, enum: ['user', 'admin'] },          // Permissions
-  preferences: { theme: String, editorSettings: Object }    // User customization
-});
-
-// Special methods:
-userSchema.pre('save') // Runs BEFORE saving (hashes password)
-userSchema.methods.comparePassword() // Checks if password is correct
-userSchema.methods.toJSON() // Removes password when sending to frontend
-```
-
-**models/session.model.js - Collaborative Sessions:**
-```javascript
-// Session Schema breakdown:
-const sessionSchema = new mongoose.Schema({
-  userId: { type: ObjectId, ref: 'User' },        // Session owner
-  title: { type: String, required: true },         // Session name
-  language: { type: String, default: 'javascript' }, // Programming language
-  content: { type: String, default: '' },          // The actual code
-  collaborators: [{                                 // People who can edit
-    userId: { type: ObjectId, ref: 'User' },
-    permissions: { type: String, enum: ['read', 'write', 'admin'] }
-  }],
-  isPublic: { type: Boolean, default: false },     // Public/private session
-  metadata: { type: Mixed }                        // Extra data
-});
-```
-
-**models/log.model.js - Activity Tracking:**
-```javascript
-// Log Schema breakdown:
-const logSchema = new mongoose.Schema({
-  level: { type: String, enum: ['info', 'warn', 'error', 'debug'] }, // Log severity
-  message: { type: String, required: true },      // What happened
-  userId: { type: ObjectId, ref: 'User' },        // Who did it
-  sessionId: { type: ObjectId, ref: 'Session' },  // Which session
-  metadata: { type: Mixed },                      // Additional data
-  timestamp: { type: Date, default: Date.now }    // When it happened
-});
-
-// TTL Index: Automatically deletes logs after 30 days
-logSchema.index({ timestamp: 1 }, { expireAfterSeconds: 2592000 });
-```
-
-**🎯 Learning Tasks:**
-1. **Create test data** for each model
-2. **Practice CRUD operations** (Create, Read, Update, Delete)
-3. **Understand relationships** between User ↔ Session ↔ Log
-4. **Learn about indexes** and why they matter for performance
 
 ---
 
