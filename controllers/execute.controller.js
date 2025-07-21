@@ -15,7 +15,7 @@ class ExecuteController {
   /**
    * Execute code in a session
    */
-  executeCode = async (req, res) => {
+  async executeCode(req, res) {
     try {
       const { sessionId, language, code, stdin, timeout } = req.body;
       const userId = req.user.id;
@@ -169,12 +169,12 @@ class ExecuteController {
         error: error.message
       });
     }
-  };
+  }
 
   /**
    * Get execution history for a session
    */
-  getExecutionHistory = async (req, res) => {
+  async getExecutionHistory(req, res) {
     try {
       const { sessionId } = req.params;
       const { page = 1, limit = 20 } = req.query;
@@ -242,12 +242,12 @@ class ExecuteController {
         error: error.message
       });
     }
-  };
+  }
 
   /**
    * Get supported programming languages
    */
-  getSupportedLanguages = async (req, res) => {
+  async getSupportedLanguages(req, res) {
     try {
       const languages = dockerService.getSupportedLanguages();
       const languageConfigs = {};
@@ -273,12 +273,12 @@ class ExecuteController {
         error: error.message
       });
     }
-  };
+  }
 
   /**
    * Get execution job status
    */
-  getExecutionStatus = async (req, res) => {
+  async getExecutionStatus(req, res) {
     try {
       const { jobId } = req.params;
       const userId = req.user.id;
@@ -339,12 +339,12 @@ class ExecuteController {
         error: error.message
       });
     }
-  };
+  }
 
   /**
    * Kill running executions for a session
    */
-  killExecution = async (req, res) => {
+  async killExecution(req, res) {
     try {
       const { sessionId } = req.params;
       const userId = req.user.id;
@@ -411,12 +411,12 @@ class ExecuteController {
         error: error.message
       });
     }
-  };
+  }
 
   /**
    * Get execution system statistics
    */
-  getExecutionStats = async (req, res) => {
+  async getExecutionStats(req, res) {
     try {
       const userId = req.user.id;
       
@@ -471,7 +471,7 @@ class ExecuteController {
         error: error.message
       });
     }
-  };
+  }
 
   /**
    * Helper: Determine if execution should be synchronous
