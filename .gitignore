@@ -2,6 +2,8 @@
 bun/
 bun-install/
 bun.lockb
+#env
+.env
 
 # Node
 node_modules/
