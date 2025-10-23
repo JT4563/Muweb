@@ -14,9 +14,9 @@ class CRDTUtils {
    */
   static get OPERATIONS() {
     return {
-      INSERT: 'insert',
-      DELETE: 'delete',
-      RETAIN: 'retain'
+      INSERT: "insert",
+      DELETE: "delete",
+      RETAIN: "retain",
     };
   }
 
@@ -28,7 +28,7 @@ class CRDTUtils {
    */
   processOperation(operation, context) {
     const { sessionId, userId, timestamp } = context;
-    
+
     // Initialize session if not exists
     if (!this.operationHistory.has(sessionId)) {
       this.operationHistory.set(sessionId, []);
@@ -37,31 +37,38 @@ class CRDTUtils {
 
     // Create unique operation ID
     const operationId = `${userId}_${timestamp}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     // Transform operation against concurrent operations
-    const transformedOperation = this.transformOperation(operation, sessionId, context);
-    
+    const transformedOperation = this.transformOperation(
+      operation,
+      sessionId,
+      context
+    );
+
     // Add operation to history
     const operationRecord = {
       id: operationId,
       ...transformedOperation,
       userId,
       timestamp,
-      applied: true
+      applied: true,
     };
-    
+
     this.operationHistory.get(sessionId).push(operationRecord);
-    
+
     // Update state vector
     this.stateVectors.get(sessionId).set(userId, timestamp);
-    
+
     // Clean up old operations (keep last 1000)
     this.cleanupOperations(sessionId);
-    
+
     return {
       ...transformedOperation,
       operationId,
-      resultingCode: this.applyOperationToText(transformedOperation, operation.baseText || '')
+      resultingCode: this.applyOperationToText(
+        transformedOperation,
+        operation.baseText || ""
+      ),
     };
   }
 
@@ -75,21 +82,26 @@ class CRDTUtils {
   transformOperation(operation, sessionId, context) {
     const history = this.operationHistory.get(sessionId) || [];
     const stateVector = this.stateVectors.get(sessionId) || new Map();
-    
+
     let transformedOp = { ...operation };
-    
+
     // Find concurrent operations that need to be transformed against
-    const concurrentOps = history.filter(op => {
-      return op.timestamp > (context.lastKnownTimestamp || 0) &&
-             op.userId !== context.userId &&
-             op.applied;
+    const concurrentOps = history.filter((op) => {
+      return (
+        op.timestamp > (context.lastKnownTimestamp || 0) &&
+        op.userId !== context.userId &&
+        op.applied
+      );
     });
-    
+
     // Apply transformations for each concurrent operation
     for (const concurrentOp of concurrentOps) {
-      transformedOp = this.transformAgainstOperation(transformedOp, concurrentOp);
+      transformedOp = this.transformAgainstOperation(
+        transformedOp,
+        concurrentOp
+      );
     }
-    
+
     return transformedOp;
   }
 
@@ -101,16 +113,28 @@ class CRDTUtils {
    */
   transformAgainstOperation(op1, op2) {
     // Simple operational transformation for basic operations
-    if (op1.type === CRDTUtils.OPERATIONS.INSERT && op2.type === CRDTUtils.OPERATIONS.INSERT) {
+    if (
+      op1.type === CRDTUtils.OPERATIONS.INSERT &&
+      op2.type === CRDTUtils.OPERATIONS.INSERT
+    ) {
       return this.transformInsertInsert(op1, op2);
-    } else if (op1.type === CRDTUtils.OPERATIONS.INSERT && op2.type === CRDTUtils.OPERATIONS.DELETE) {
+    } else if (
+      op1.type === CRDTUtils.OPERATIONS.INSERT &&
+      op2.type === CRDTUtils.OPERATIONS.DELETE
+    ) {
       return this.transformInsertDelete(op1, op2);
-    } else if (op1.type === CRDTUtils.OPERATIONS.DELETE && op2.type === CRDTUtils.OPERATIONS.INSERT) {
+    } else if (
+      op1.type === CRDTUtils.OPERATIONS.DELETE &&
+      op2.type === CRDTUtils.OPERATIONS.INSERT
+    ) {
       return this.transformDeleteInsert(op1, op2);
-    } else if (op1.type === CRDTUtils.OPERATIONS.DELETE && op2.type === CRDTUtils.OPERATIONS.DELETE) {
+    } else if (
+      op1.type === CRDTUtils.OPERATIONS.DELETE &&
+      op2.type === CRDTUtils.OPERATIONS.DELETE
+    ) {
       return this.transformDeleteDelete(op1, op2);
     }
-    
+
     return op1;
   }
 
@@ -121,7 +145,7 @@ class CRDTUtils {
     if (op2.position <= op1.position) {
       return {
         ...op1,
-        position: op1.position + op2.text.length
+        position: op1.position + op2.text.length,
       };
     }
     return op1;
@@ -134,7 +158,7 @@ class CRDTUtils {
     if (op2.position <= op1.position) {
       return {
         ...op1,
-        position: Math.max(op2.position, op1.position - op2.length)
+        position: Math.max(op2.position, op1.position - op2.length),
       };
     }
     return op1;
@@ -147,7 +171,7 @@ class CRDTUtils {
     if (op2.position <= op1.position) {
       return {
         ...op1,
-        position: op1.position + op2.text.length
+        position: op1.position + op2.text.length,
       };
     }
     return op1;
@@ -158,32 +182,35 @@ class CRDTUtils {
    */
   transformDeleteDelete(op1, op2) {
     if (op2.position < op1.position) {
-      const overlap = Math.min(op1.position + op1.length, op2.position + op2.length) - 
-                     Math.max(op1.position, op2.position);
-      
+      const overlap =
+        Math.min(op1.position + op1.length, op2.position + op2.length) -
+        Math.max(op1.position, op2.position);
+
       if (overlap > 0) {
         // There's an overlap, adjust the operation
         return {
           ...op1,
           position: Math.max(op1.position - op2.length, op2.position),
-          length: Math.max(0, op1.length - overlap)
+          length: Math.max(0, op1.length - overlap),
         };
       } else {
         // No overlap, just shift position
         return {
           ...op1,
-          position: op1.position - op2.length
+          position: op1.position - op2.length,
         };
       }
     } else if (op2.position < op1.position + op1.length) {
       // Partial overlap
-      const newLength = op1.length - Math.min(op2.length, op1.position + op1.length - op2.position);
+      const newLength =
+        op1.length -
+        Math.min(op2.length, op1.position + op1.length - op2.position);
       return {
         ...op1,
-        length: Math.max(0, newLength)
+        length: Math.max(0, newLength),
       };
     }
-    
+
     return op1;
   }
 
@@ -196,17 +223,21 @@ class CRDTUtils {
   applyOperationToText(operation, text) {
     switch (operation.type) {
       case CRDTUtils.OPERATIONS.INSERT:
-        return text.slice(0, operation.position) + 
-               operation.text + 
-               text.slice(operation.position);
-               
+        return (
+          text.slice(0, operation.position) +
+          operation.text +
+          text.slice(operation.position)
+        );
+
       case CRDTUtils.OPERATIONS.DELETE:
-        return text.slice(0, operation.position) + 
-               text.slice(operation.position + operation.length);
-               
+        return (
+          text.slice(0, operation.position) +
+          text.slice(operation.position + operation.length)
+        );
+
       case CRDTUtils.OPERATIONS.RETAIN:
         return text; // No change for retain operations
-        
+
       default:
         return text;
     }
@@ -222,7 +253,7 @@ class CRDTUtils {
     return {
       type: CRDTUtils.OPERATIONS.INSERT,
       position,
-      text
+      text,
     };
   }
 
@@ -236,7 +267,7 @@ class CRDTUtils {
     return {
       type: CRDTUtils.OPERATIONS.DELETE,
       position,
-      length
+      length,
     };
   }
 
@@ -248,7 +279,7 @@ class CRDTUtils {
   createRetainOperation(length) {
     return {
       type: CRDTUtils.OPERATIONS.RETAIN,
-      length
+      length,
     };
   }
 
@@ -261,46 +292,59 @@ class CRDTUtils {
    */
   generateOperationsFromDiff(oldText, newText, cursorPosition = 0) {
     const operations = [];
-    
+
     // Simple diff algorithm - find common prefix and suffix
     let commonPrefixLength = 0;
-    while (commonPrefixLength < Math.min(oldText.length, newText.length) &&
-           oldText[commonPrefixLength] === newText[commonPrefixLength]) {
+    while (
+      commonPrefixLength < Math.min(oldText.length, newText.length) &&
+      oldText[commonPrefixLength] === newText[commonPrefixLength]
+    ) {
       commonPrefixLength++;
     }
-    
+
     let commonSuffixLength = 0;
-    while (commonSuffixLength < Math.min(
-             oldText.length - commonPrefixLength,
-             newText.length - commonPrefixLength
-           ) &&
-           oldText[oldText.length - 1 - commonSuffixLength] === 
-           newText[newText.length - 1 - commonSuffixLength]) {
+    while (
+      commonSuffixLength <
+        Math.min(
+          oldText.length - commonPrefixLength,
+          newText.length - commonPrefixLength
+        ) &&
+      oldText[oldText.length - 1 - commonSuffixLength] ===
+        newText[newText.length - 1 - commonSuffixLength]
+    ) {
       commonSuffixLength++;
     }
-    
+
     // Retain common prefix
     if (commonPrefixLength > 0) {
       operations.push(this.createRetainOperation(commonPrefixLength));
     }
-    
+
     // Delete middle part if it exists
-    const deleteLength = oldText.length - commonPrefixLength - commonSuffixLength;
+    const deleteLength =
+      oldText.length - commonPrefixLength - commonSuffixLength;
     if (deleteLength > 0) {
-      operations.push(this.createDeleteOperation(commonPrefixLength, deleteLength));
+      operations.push(
+        this.createDeleteOperation(commonPrefixLength, deleteLength)
+      );
     }
-    
+
     // Insert new middle part if it exists
-    const insertText = newText.slice(commonPrefixLength, newText.length - commonSuffixLength);
+    const insertText = newText.slice(
+      commonPrefixLength,
+      newText.length - commonSuffixLength
+    );
     if (insertText.length > 0) {
-      operations.push(this.createInsertOperation(commonPrefixLength, insertText));
+      operations.push(
+        this.createInsertOperation(commonPrefixLength, insertText)
+      );
     }
-    
+
     // Retain common suffix
     if (commonSuffixLength > 0) {
       operations.push(this.createRetainOperation(commonSuffixLength));
     }
-    
+
     return operations;
   }
 
@@ -312,49 +356,53 @@ class CRDTUtils {
   composeOperations(operations) {
     if (operations.length === 0) return [];
     if (operations.length === 1) return operations;
-    
+
     const composed = [];
     let current = operations[0];
-    
+
     for (let i = 1; i < operations.length; i++) {
       const next = operations[i];
-      
+
       // Try to merge similar operations
       if (current.type === next.type) {
-        if (current.type === CRDTUtils.OPERATIONS.INSERT && 
-            current.position + current.text.length === next.position) {
+        if (
+          current.type === CRDTUtils.OPERATIONS.INSERT &&
+          current.position + current.text.length === next.position
+        ) {
           // Merge adjacent inserts
           current = {
             ...current,
-            text: current.text + next.text
+            text: current.text + next.text,
           };
           continue;
-        } else if (current.type === CRDTUtils.OPERATIONS.DELETE &&
-                   current.position === next.position) {
+        } else if (
+          current.type === CRDTUtils.OPERATIONS.DELETE &&
+          current.position === next.position
+        ) {
           // Merge adjacent deletes
           current = {
             ...current,
-            length: current.length + next.length
+            length: current.length + next.length,
           };
           continue;
         } else if (current.type === CRDTUtils.OPERATIONS.RETAIN) {
           // Merge retains
           current = {
             ...current,
-            length: current.length + next.length
+            length: current.length + next.length,
           };
           continue;
         }
       }
-      
+
       // Can't merge, add current to composed and move to next
       composed.push(current);
       current = next;
     }
-    
+
     // Add the last operation
     composed.push(current);
-    
+
     return composed;
   }
 
@@ -378,7 +426,7 @@ class CRDTUtils {
    */
   getOperationHistory(sessionId, fromTimestamp = 0) {
     const history = this.operationHistory.get(sessionId) || [];
-    return history.filter(op => op.timestamp > fromTimestamp);
+    return history.filter((op) => op.timestamp > fromTimestamp);
   }
 
   /**
@@ -405,30 +453,33 @@ class CRDTUtils {
    * @returns {boolean} True if valid
    */
   isValidOperation(operation) {
-    if (!operation || typeof operation !== 'object') {
+    if (!operation || typeof operation !== "object") {
       return false;
     }
-    
+
     if (!Object.values(CRDTUtils.OPERATIONS).includes(operation.type)) {
       return false;
     }
-    
+
     switch (operation.type) {
       case CRDTUtils.OPERATIONS.INSERT:
-        return typeof operation.position === 'number' &&
-               typeof operation.text === 'string' &&
-               operation.position >= 0;
-               
+        return (
+          typeof operation.position === "number" &&
+          typeof operation.text === "string" &&
+          operation.position >= 0
+        );
+
       case CRDTUtils.OPERATIONS.DELETE:
-        return typeof operation.position === 'number' &&
-               typeof operation.length === 'number' &&
-               operation.position >= 0 &&
-               operation.length > 0;
-               
+        return (
+          typeof operation.position === "number" &&
+          typeof operation.length === "number" &&
+          operation.position >= 0 &&
+          operation.length > 0
+        );
+
       case CRDTUtils.OPERATIONS.RETAIN:
-        return typeof operation.length === 'number' &&
-               operation.length > 0;
-               
+        return typeof operation.length === "number" && operation.length > 0;
+
       default:
         return false;
     }
