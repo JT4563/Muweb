@@ -1,5 +1,9 @@
 // MongoDB initialization script
 // This script runs when MongoDB container starts
+// Note: This is MongoDB JavaScript (mongosh), not Node.js
+// db, ObjectId, and print are provided by MongoDB
+
+/* eslint-disable no-undef */
 
 db.getSiblingDB("admin").auth("admin", "changeme123!");
 
@@ -35,7 +39,7 @@ db.users.insertOne({
   _id: ObjectId(),
   username: "testuser",
   email: "test@example.com",
-  password: "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcg7b3XeKeQJJ6pE8/9CX7GqMvu", // hash of 'password'
+  password: "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcg7b3XeKeQJJ6pE8/9CX7GqMvu",
   firstName: "Test",
   lastName: "User",
   role: "user",
@@ -57,7 +61,7 @@ db.users.insertOne({
   _id: ObjectId(),
   username: "admin",
   email: "admin@example.com",
-  password: "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcg7b3XeKeQJJ6pE8/9CX7GqMvu", // hash of 'password'
+  password: "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcg7b3XeKeQJJ6pE8/9CX7GqMvu",
   firstName: "Admin",
   lastName: "User",
   role: "admin",

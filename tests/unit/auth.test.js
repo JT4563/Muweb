@@ -1,6 +1,4 @@
 // tests/unit/auth.test.js
-const request = require("supertest");
-const mongoose = require("mongoose");
 const User = require("../../models/user.model");
 const {
   connectTestDB,

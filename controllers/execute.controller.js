@@ -1,5 +1,4 @@
 const { v4: uuidv4 } = require("uuid");
-const amqp = require("amqplib");
 const dockerService = require("../services/docker.service");
 const queueService = require("../services/queue.service");
 const Session = require("../models/session.model");
@@ -415,8 +414,6 @@ class ExecuteController {
    */
   async getExecutionStats(req, res) {
     try {
-      const userId = req.user.id;
-
       // Basic auth check - in production, you'd want admin role check
       // For now, any authenticated user can view stats
 
