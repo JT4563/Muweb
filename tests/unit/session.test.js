@@ -1,3 +1,4 @@
+/* eslint-env jest */
 // tests/unit/session.test.js
 const Session = require("../../models/session.model");
 const User = require("../../models/user.model");
