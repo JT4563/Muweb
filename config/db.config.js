@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-require('dotenv').config();
+const mongoose = require("mongoose");
+require("dotenv").config();
 
 /**
  * Database configuration and connection management
@@ -16,18 +16,33 @@ const dbConfig = {
         useUnifiedTopology: true,
       };
 
-      // Get connection string from environment variables or use default
-      const dbHost = process.env.DB_HOST || 'localhost';
-      const dbName = process.env.DB_NAME || 'muweb_db';
-      const dbUser = process.env.DB_USER || 'muweb_user';
-      const dbPassword = process.env.DB_PASSWORD || 'muweb_password';
-      
-      const connectionString = `mongodb://${dbUser}:${dbPassword}@${dbHost}/${dbName}`;
-      
+      // Get connection string from environment variables
+      let connectionString = process.env.MONGODB_URI;
+
+      // If no MONGODB_URI, construct from individual parts
+      if (!connectionString) {
+        const dbHost = process.env.DB_HOST || "localhost";
+        const dbPort = process.env.DB_PORT || "27017";
+        const dbName = process.env.DB_NAME || "codecrafter";
+        const dbUser = process.env.DB_USER;
+        const dbPassword = process.env.DB_PASSWORD;
+
+        // Build connection string with or without authentication
+        if (dbUser && dbPassword) {
+          connectionString = `mongodb://${dbUser}:${dbPassword}@${dbHost}:${dbPort}/${dbName}`;
+        } else {
+          connectionString = `mongodb://${dbHost}:${dbPort}/${dbName}`;
+        }
+      }
+
+      console.log(
+        `Connecting to MongoDB at: ${connectionString.replace(/:[^:]*@/, ":***@")}`
+      );
+
       // Connect to the MongoDB
       return await mongoose.connect(connectionString, connectionOptions);
     } catch (error) {
-      console.error('MongoDB connection error:', error);
+      console.error("MongoDB connection error:", error);
       throw error;
     }
   },
@@ -38,7 +53,7 @@ const dbConfig = {
    */
   disconnect: async () => {
     return await mongoose.disconnect();
-  }
+  },
 };
 
 module.exports = dbConfig;
