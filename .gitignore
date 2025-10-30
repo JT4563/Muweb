@@ -2,11 +2,15 @@
 bun/
 bun-install/
 bun.lockb
-#env
+
+# Environment files (sensitive data - don't commit)
 .env
+backend/.env
 
 # Node
 node_modules/
+backend/node_modules/
+frontend/node_modules/
 
 # Build outputs
 dist/
@@ -19,7 +23,13 @@ bin/
 *.mod
 *.sum
 
-# VS Code and OS
+# IDE
 .vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
 .DS_Store
 Thumbs.db
+
