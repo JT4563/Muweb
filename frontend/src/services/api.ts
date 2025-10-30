@@ -1,7 +1,7 @@
 import axios from "axios";
 import type { AxiosInstance, AxiosError } from "axios";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8001";
 const REQUEST_TIMEOUT = 30000;
 
 export interface ApiResponse<T> {
@@ -61,6 +61,45 @@ client.interceptors.request.use((config) => {
   }
   return config;
 });
+
+// Response interceptor: Handle token refresh on 401
+client.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config as any;
+
+    // If 401 and not already retried, try to refresh token
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      const refreshToken = localStorage.getItem("refreshToken");
+
+      if (refreshToken) {
+        try {
+          const response = await client.post("/api/auth/refresh", {
+            refreshToken,
+          });
+
+          const { tokens } = response.data;
+          localStorage.setItem("authToken", tokens.accessToken);
+          localStorage.setItem("refreshToken", tokens.refreshToken);
+
+          // Retry original request with new token
+          originalRequest.headers.Authorization = `Bearer ${tokens.accessToken}`;
+          return client(originalRequest);
+        } catch (refreshError) {
+          // Refresh failed, clear auth and redirect to login
+          localStorage.removeItem("authToken");
+          localStorage.removeItem("refreshToken");
+          localStorage.removeItem("user");
+          window.location.href = "/login";
+          return Promise.reject(refreshError);
+        }
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
 
 // Response interceptor: Handle errors and retry logic
 client.interceptors.response.use(

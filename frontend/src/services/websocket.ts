@@ -1,6 +1,6 @@
 import { io, Socket } from "socket.io-client";
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:8000";
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:8001";
 
 class WebSocketService {
   private socket: Socket | null = null;
@@ -10,6 +10,8 @@ class WebSocketService {
 
   connect(): Promise<void> {
     return new Promise((resolve, reject) => {
+      const token = localStorage.getItem("authToken");
+
       this.socket = io(SOCKET_URL, {
         reconnection: true,
         reconnectionDelay: this.reconnectDelay,
@@ -17,7 +19,7 @@ class WebSocketService {
         reconnectionAttempts: this.maxReconnectAttempts,
         transports: ["websocket", "polling"],
         auth: {
-          token: localStorage.getItem("authToken"),
+          token: token || "",
         },
       });
 
