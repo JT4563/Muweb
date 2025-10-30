@@ -230,7 +230,7 @@ services:
 
   # C/C++
   sandbox-cpp:
-    image: gcc:alpine
+    image: gcc:13-alpine
     command: tail -f /dev/null
     working_dir: /workspace
     volumes:
@@ -249,7 +249,7 @@ services:
 
   # Go
   sandbox-go:
-    image: golang:alpine
+    image: golang:1.21-alpine
     command: tail -f /dev/null
     working_dir: /workspace
     volumes:
@@ -268,7 +268,7 @@ services:
 
   # Rust
   sandbox-rust:
-    image: rust:alpine
+    image: rust:1.73-alpine
     command: tail -f /dev/null
     working_dir: /workspace
     volumes:

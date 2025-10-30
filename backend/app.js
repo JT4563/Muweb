@@ -87,9 +87,141 @@ const executeRoutes = require("./api/execute.routes");
 const authMiddleware = require("./middleware/auth.middleware");
 const errorHandler = require("./middleware/error.middleware");
 
-// Import required services
-const queueService = require("./services/queue.service");
-const dockerService = require("./services/docker.service");
+// Root endpoint - Welcome page with API documentation
+app.get("/", (req, res) => {
+  // Only expose detailed docs in development or to authenticated users
+  const isProduction = process.env.NODE_ENV === "production";
+  const isAuthenticated = req.user ? true : false;
+
+  const response = {
+    message: "Welcome to CodeCrafter API 🚀",
+    version: process.env.npm_package_version || "1.0.0",
+    status: "Server is running",
+    environment: process.env.NODE_ENV || "development",
+    timestamp: new Date().toISOString(),
+  };
+
+  // Show endpoints documentation in development or to authenticated users (safer for production)
+  if (!isProduction || isAuthenticated) {
+    response.endpoints = {
+      health: {
+        path: "/health",
+        method: "GET",
+        description: "Check server health status",
+      },
+      metrics: {
+        path: "/metrics",
+        method: "GET",
+        description: "Get server metrics (uptime, memory, CPU)",
+      },
+      auth: {
+        signup: {
+          path: "/api/auth/signup",
+          method: "POST",
+          description: "Create a new user account",
+          body: {
+            email: "string",
+            password: "string",
+            name: "string",
+          },
+        },
+        login: {
+          path: "/api/auth/login",
+          method: "POST",
+          description: "Login and get JWT tokens",
+          body: {
+            email: "string",
+            password: "string",
+          },
+        },
+        logout: {
+          path: "/api/auth/logout",
+          method: "POST",
+          description: "Logout user",
+          requiresAuth: true,
+        },
+        refresh: {
+          path: "/api/auth/refresh",
+          method: "POST",
+          description: "Refresh JWT token",
+          body: {
+            refreshToken: "string",
+          },
+        },
+      },
+      sessions: {
+        list: {
+          path: "/api/sessions",
+          method: "GET",
+          description: "List all sessions",
+          requiresAuth: true,
+        },
+        create: {
+          path: "/api/sessions",
+          method: "POST",
+          description: "Create a new session",
+          requiresAuth: true,
+          body: {
+            title: "string",
+            description: "string",
+          },
+        },
+        get: {
+          path: "/api/sessions/:sessionId",
+          method: "GET",
+          description: "Get session details",
+          requiresAuth: true,
+        },
+        join: {
+          path: "/api/sessions/:sessionId/join",
+          method: "POST",
+          description: "Join a session",
+          requiresAuth: true,
+        },
+      },
+      execute: {
+        run: {
+          path: "/api/execute/run",
+          method: "POST",
+          description: "Execute code",
+          requiresAuth: true,
+          body: {
+            language: "string (node, python, java, cpp, go, rust)",
+            code: "string",
+            input: "string (optional)",
+          },
+        },
+        history: {
+          path: "/api/execute/history",
+          method: "GET",
+          description: "Get execution history",
+          requiresAuth: true,
+        },
+      },
+    };
+    response.features = {
+      authentication: "JWT-based authentication with refresh tokens",
+      websocket: "Real-time collaboration via Socket.IO",
+      codeExecution: "Execute code in sandboxed containers",
+      sessions: "Create and join collaborative coding sessions",
+      monitoring: "Prometheus metrics and Grafana dashboards",
+    };
+    response.documentation = {
+      swagger: "/api-docs (coming soon)",
+      github: "https://github.com/tanmayjoddar/Muweb",
+    };
+  } else {
+    // In production without auth, show minimal info
+    response.info =
+      "For API documentation, please authenticate or visit development environment";
+    response.links = {
+      health: "/health",
+      docs: "See README.md for API documentation",
+    };
+  }
+
+  res.status(200).json(response);
+});
 
 // Health check endpoint
 app.get("/health", (req, res) => {
