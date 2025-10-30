@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   # Main Application
@@ -98,7 +98,7 @@ services:
   rabbitmq:
     image: rabbitmq:3.12-management-alpine
     ports:
-      - "5672:5672"   # AMQP port
+      - "5672:5672" # AMQP port
       - "15672:15672" # Management UI
     environment:
       - RABBITMQ_DEFAULT_USER=codecrafter
@@ -141,12 +141,12 @@ services:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
     command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/etc/prometheus/console_libraries'
-      - '--web.console.templates=/etc/prometheus/consoles'
-      - '--storage.tsdb.retention.time=200h'
-      - '--web.enable-lifecycle'
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/etc/prometheus/console_libraries"
+      - "--web.console.templates=/etc/prometheus/consoles"
+      - "--storage.tsdb.retention.time=200h"
+      - "--web.enable-lifecycle"
     networks:
       - codecrafter-network
     restart: unless-stopped
@@ -180,11 +180,14 @@ services:
     networks:
       - codecrafter-sandbox
     restart: "no"
-    cpus: 0.5
-    memory: 128M
     read_only: true
     tmpfs:
       - /tmp:size=50M
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128M
 
   # Python
   sandbox-python:
@@ -196,11 +199,14 @@ services:
     networks:
       - codecrafter-sandbox
     restart: "no"
-    cpus: 0.5
-    memory: 128M
     read_only: true
     tmpfs:
       - /tmp:size=50M
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128M
 
   # Java
   sandbox-java:
@@ -212,11 +218,14 @@ services:
     networks:
       - codecrafter-sandbox
     restart: "no"
-    cpus: 0.5
-    memory: 256M
     read_only: true
     tmpfs:
       - /tmp:size=50M
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
 
   # C/C++
   sandbox-cpp:
@@ -228,11 +237,14 @@ services:
     networks:
       - codecrafter-sandbox
     restart: "no"
-    cpus: 0.5
-    memory: 128M
     read_only: true
     tmpfs:
       - /tmp:size=50M
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128M
 
   # Go
   sandbox-go:
@@ -244,11 +256,14 @@ services:
     networks:
       - codecrafter-sandbox
     restart: "no"
-    cpus: 0.5
-    memory: 128M
     read_only: true
     tmpfs:
       - /tmp:size=50M
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128M
 
   # Rust
   sandbox-rust:
@@ -260,11 +275,14 @@ services:
     networks:
       - codecrafter-sandbox
     restart: "no"
-    cpus: 0.5
-    memory: 128M
     read_only: true
     tmpfs:
       - /tmp:size=50M
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128M
 
 networks:
   codecrafter-network:
