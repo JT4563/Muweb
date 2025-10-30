@@ -73,7 +73,7 @@ docker-compose ps
 
 **4️⃣ Access Applications**
 
-- 🌐 **App**: http://localhost:5000
+- 🌐 **App**: http://localhost:8000
 - 📊 **RabbitMQ**: http://localhost:15672 (codecrafter / codecrafter123)
 - 📈 **Prometheus**: http://localhost:9090
 - 📊 **Grafana**: http://localhost:3001 (admin / codecrafter123)
@@ -196,7 +196,7 @@ docker-compose ps | grep worker
 
 | Service        | URL                    | Port  | Credentials                  |
 | -------------- | ---------------------- | ----- | ---------------------------- |
-| **App**        | http://localhost:5000  | 5000  | -                            |
+| **App**        | http://localhost:8000  | 8000  | -                            |
 | **Nginx**      | http://localhost:80    | 80    | -                            |
 | **RabbitMQ**   | http://localhost:15672 | 15672 | codecrafter / codecrafter123 |
 | **Prometheus** | http://localhost:9090  | 9090  | -                            |

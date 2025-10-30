@@ -41,7 +41,7 @@ docker-compose up -d nginx
 
 | Service                 | URL                    | Port  | Credentials                  |
 | ----------------------- | ---------------------- | ----- | ---------------------------- |
-| **App API**             | http://localhost:5000  | 5000  | -                            |
+| **App API**             | http://localhost:8000  | 8000  | -                            |
 | **Nginx**               | http://localhost:80    | 80    | -                            |
 | **RabbitMQ Management** | http://localhost:15672 | 15672 | codecrafter / codecrafter123 |
 | **Prometheus**          | http://localhost:9090  | 9090  | -                            |
@@ -215,7 +215,7 @@ RABBITMQ_USERNAME=codecrafter
 RABBITMQ_PASSWORD=codecrafter123
 
 # Server
-PORT=5000
+PORT=8000
 NODE_ENV=production
 FRONTEND_URL=http://localhost:3000
 
