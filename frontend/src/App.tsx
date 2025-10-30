@@ -1,6 +1,13 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 import ErrorBoundary from "./components/ErrorBoundary";
 import EditorPage from "./pages/EditorPage";
+import LoginPage from "./pages/LoginPage";
 import "./App.css";
 
 // Create a client for React Query
@@ -13,6 +20,19 @@ const queryClient = new QueryClient({
   },
 });
 
+// Protected Route Component
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+}
+
+const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
+  const token = localStorage.getItem("authToken");
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+  return <>{children}</>;
+};
+
 function App() {
   return (
     <ErrorBoundary
@@ -22,7 +42,28 @@ function App() {
       }}
     >
       <QueryClientProvider client={queryClient}>
-        <EditorPage sessionId="default-session" />
+        <Router>
+          <Routes>
+            {/* Auth Routes */}
+            <Route path="/login" element={<LoginPage />} />
+
+            {/* Protected Routes */}
+            <Route
+              path="/editor"
+              element={
+                <ProtectedRoute>
+                  <EditorPage sessionId="default-session" />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Default Route */}
+            <Route path="/" element={<Navigate to="/login" replace />} />
+
+            {/* 404 Route */}
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
+        </Router>
       </QueryClientProvider>
     </ErrorBoundary>
   );
